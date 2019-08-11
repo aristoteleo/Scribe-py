@@ -1,7 +1,19 @@
-##############################################################################
-# Run pairwise Correlation over the data
 def corr(self, number_of_processes=1):
+    """Calculate pairwise correlation over the data
 
+    Arguments
+    ---------
+        self: 'class causal_model object'
+            An instance of a causal_model class object. This object can be converted from an AnnData object through
+            load_anndata function.
+        number_of_processes: `int` (Default: 1)
+            Number of processes to use.
+
+    Returns
+    ---------
+    corr_results: 'pd.core.frame.DataFrame'
+        The correlation network inferred.
+    """
     self.corr_results = pandas.DataFrame({node_id: [np.nan for i in self.node_ids] for node_id in self.node_ids}, index=self.node_ids)
     if number_of_processes > 1: temp_input = []
 
@@ -22,10 +34,22 @@ def corr(self, number_of_processes=1):
     return self.corr_results
 
 
-##############################################################################
-# Run pairwise MI over the data
 def mi(self, number_of_processes=1):
+    """Calculate pairwise mutual information over the data
 
+    Arguments
+    ---------
+        self: 'class causal_model object'
+            An instance of a causal_model class object. This object can be converted from an AnnData object through
+            load_anndata function.
+        number_of_processes: `int` (Default: 1)
+            Number of processes to use.
+
+    Returns
+    ---------
+    mi_results: 'pd.core.frame.DataFrame'
+        The mutual information network inferred.
+    """
     self.mi_results = pandas.DataFrame({node_id: [np.nan for i in self.node_ids] for node_id in self.node_ids}, index=self.node_ids)
     if number_of_processes > 1: temp_input = []
 

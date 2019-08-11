@@ -1,6 +1,3 @@
-# Written by Weihao Gao from UIUC
-# Revised by Arman Rahimzamani from UW
-
 import time
 import scipy.spatial as ss
 from scipy.special import digamma,gamma
@@ -16,13 +13,40 @@ from copy import deepcopy
 from scipy.stats import rankdata
 
 
-# This subroutine calculates the volume of a d-dimensional unit ball for Euclidean norm
 def vd(d):
+    """Calculates the volume of a d-dimensional unit ball for Euclidean norm.
+
+    `vd` takes a integer of dimensions and then calculate the volume of a d-dimensional unit ball for Euclidean norm
+    using the formula: :math:`0.5 * d * log(pi) - log(gamma(0.5 * d + 1))`.
+
+    Arguments
+    ---------
+        d: 'int'
+            Number of dimension.
+
+    Returns
+    -------
+    A numeric value for the d-dimensional unit ball for Euclidean norm
+    """
     return 0.5 * d * log(pi) - log(gamma(0.5 * d + 1))
 
 
-# This function estimates the entropy of a continuous random variable
 def entropy(x, k=5):
+    """Estimates the entropy of a continuous random variable.
+
+    `entropy` takes a continuous random variable and then estimates entropy using the KSG estimator. It relies on the
+    cKDTree function in scipy to query the kNN with KDTree algorithm.
+
+    Arguments
+    ---------
+        x: 'np.ndarray'
+            Data matrix used for calculating the entropy.
+        k: Number for nearest neighbors used in entropy calculation
+
+    Returns
+    -------
+    A numeric value of entropy estimate
+    """
     N = len(x)  # The number of observed samples
     # k = int(np.floor(np.sqrt(N)))
     d = len(x[0])  # The number of the dimensions of the data
@@ -33,9 +57,27 @@ def entropy(x, k=5):
     return ans + d * np.mean(map(log, knn_dis))
 
 
-# This function estimates the mutual information of two random variables based on their observed values
 def mi(x_orig, y_orig, use_rank_order=False, k=5):
+    """Estimates the mutual information of two random variables based on their observed values.
 
+    `mi` takes two random variables :math:`x` and :math:`y` to estimate the mutual information between them using the KSG estimator.
+    It relies on the cKDTree function in scipy to query the kNN with KDTree algorithm.
+
+    Arguments
+    ---------
+        x_orig: `List`
+            One random variable from the time-series data.
+        y_orig: `List`
+            Another random variable from the time-series data.
+        use_rank_order: `bool` (default: False)
+            Whether to use rank order instead of actual value for MI calculation.
+        k: (Default: 5)
+            Number for nearest neighbors used in entropy calculation
+
+    Returns
+    -------
+    A numeric value of mutual information estimate
+    """
     x = deepcopy(x_orig)
     y = deepcopy(y_orig)
 
@@ -67,9 +109,30 @@ def mi(x_orig, y_orig, use_rank_order=False, k=5):
 
     return np.mean(information_samples)
 
-# This function estimates the CONDITIONAL mutual information of X and Y given Z
 def cmi(x_orig, y_orig, z_orig, normalization=False, k=5):
+    """Estimates the CONDITIONAL mutual information of :math:`x` and :math:`y` given :math:`z`.
 
+    `cmi` takes two random variable :math:`x` and :math:`y` and estimated their mutual information conditioned on the
+    third random variable :math:`z` using the KSG estimator. It relies on the cKDTree function in scipy to query the kNN
+    with KDTree algorithm.
+
+    Arguments
+    ---------
+        x_orig: `List`
+            One random variable from the time-series data.
+        y_orig: `List`
+            Another random variable from the time-series data.
+        z_orig: `List`
+            Condition random variable for variables (:math:`x, y`) from the time-series data.
+        use_rank_order: `bool` (default: False)
+            Whether to use rank order instead of actual value for MI calculation.
+        k: `int` (Default: 5)
+            Number for nearest neighbors used in entropy calculation
+
+    Returns
+    -------
+    A numeric value of conditional mutual information estimate
+    """
     x = deepcopy(x_orig)
     y = deepcopy(y_orig)
     z = deepcopy(z_orig)
@@ -111,9 +174,28 @@ def cmi(x_orig, y_orig, z_orig, normalization=False, k=5):
     return np.mean(information_samples)
 
 
-# This function simulates the DIRECTED mutual information from X to Y when you have a SINGLE run of the processes
-# Parameter n determines the the number previous time samples upon which the mi is conditioned
 def di_single_run(x,y, n=10, bagging=None):
+    """Simulates the DIRECTED mutual information from :math:`x` to :math:`y` when you have a SINGLE run of the processes.
+
+    `cmi` takes two random variable :math:`x` and :math:`y` and estimated their mutual information conditioned on the
+    third random variable :math:`z` using the KSG estimator. It relies on the cKDTree function in scipy to query the kNN
+    with KDTree algorithm.
+
+    Arguments
+    ---------
+        x: `List`
+            One random variable from the time-series data.
+        y: `List`
+            Another random variable from the time-series data.
+        n: `int`
+            Determines the the number previous time samples upon which the mi is conditioned.
+        bagging: `bool` (default: None)
+            This argument is not used anymore.
+
+    Returns
+    -------
+    A numeric value of entropy estimate
+    """
     assert len(x[0]) == len(y[0]), "The number of time samples has to be the same for X and Y"
     tau = n
     tot_len = len(x) - tau
@@ -125,142 +207,33 @@ def di_single_run(x,y, n=10, bagging=None):
     return cmi(x_past, y[tau:tau+tot_len], y_past)
 
 
-# #BIAS AND VARIANCE FOR THE BAGGING FEATURE
-# cmi1_normal = []
-# cmi2_normal = []
-# cmi1_bagging = []
-# cmi2_bagging = []
-# N = 500
-#
-# for iter in range(100):
-#     alpha = .9; alpha_tilda=np.sqrt(1-alpha**2)
-#     X = np.array([[gauss(0,1)] for i in range(N)])
-#     Y = np.array([[alpha*X[i][0]+alpha_tilda*gauss(0,1)] for i in range(N)])
-#     Z = np.array([[alpha*Y[i][0]+alpha_tilda*gauss(0,1)] for i in range(N)])
-#     cmi1_normal.append( cmi(Z,X,Y, k=5) )
-#     cmi2_normal.append( cmi(Y,Z,X, k=5) )
-#     cmi1_bagging.append( cmi(Z,X,Y, k=5, bagging=100) )
-#     cmi2_bagging.append( cmi(Y,Z,X, k=5, bagging=100) )
-#     print iter
-#
-# print "MEAN for bagging:", np.mean(cmi1_bagging)
-# print "VARIANCE for bagging:", np.var(cmi1_bagging)
-# print "MEAN for normal:", np.mean(cmi1_normal)
-# print "VARIANCE for normal:", np.var(cmi1_normal)
-#
-# print "\nMEAN for bagging:", np.mean(cmi2_bagging)
-# print "VARIANCE for bagging:", np.var(cmi2_bagging)
-# print "MEAN for normal:", np.mean(cmi2_normal)
-# print "VARIANCE for normal:", np.var(cmi2_normal)
-
-
-# TEST FOR THE FUNCTIONS
-
-#
-# N = 100000
-# alpha = .9; alpha_tilda=np.sqrt(1-alpha**2)
-# N = 500
-# X = [[gauss(0,0.01)] for i in range(N)]
-# Y = [[gauss(0,1)] for i in range(N)]
-# Z = [[gauss(0,0.1)] for i in range(N)]
-# print(cmi(X,Y,Z,k=5))
-# Y = [[alpha*X[i][0]+alpha_tilda*gauss(0,1)] for i in range(N)]
-# Z = [[alpha*Y[i][0]+alpha_tilda*gauss(0,1)] for i in range(N)]
-# X = [ [abs(i[0])+1] for i in X ]
-# Y = [ [abs(i[0])+1] for i in Y ]
-# Z = [ [abs(i[0])+1] for i in Z ]
-# print cmi(Z,X,Y, k=5, bagging=100)
-# print cmi(np.log(Z),np.log(X),np.log(Y))
-# start_time = time.time()
-# print mi(X,Y)
-# print mi(np.log(X),np.log(Y))
-# print cmi(Y,Z,X, k=5, bagging=100)
-# print cmi(np.log(X),np.log(Y),np.log(Z))
-# print mi(Y,Z)
-# print mi(np.log(Y),np.log(Z))
-# print mi(X,Z)
-# # print mi(np.log(X),np.log(Z))
-# print cmi(X,Y,Z)
-# print time.time()-start_time
-# # X_scaled = [[10*i[0]] for i in X]
-# # Y_scaled = [[2*i[0]] for i in Y]
-# # print cmi(X_scaled,Y,Z)
-# # print mi(X,Y)
-# # print mi(X_scaled,Y_scaled)
-
-# X1 = np.array([[gauss(0,1)] for i in range(N)])
-# X2 = [ [alpha*X1[i][0]+alpha_tilda*gauss(0,1)] for i in range(N-1)]
-# X2 = np.array([[ gauss(0,1) ]] + X2)
-# X3 = [ [alpha*X2[i][0]+alpha_tilda*gauss(0,1)] for i in range(N-1)]
-# X3 = np.array([[ gauss(0,1) ]] + X3)
-# X4 = [ [alpha*X3[i][0]+alpha_tilda*gauss(0,1)] for i in range(N-1)]
-# X4 = np.array([[ gauss(0,1) ]] + X4)
-# #
-# # # print len(X1), len(X2), len(X3), len(X4)
-# #
-# z = {"A":X1,"B":X3}
-# z_delays = {"A":3,"B":1}
-# #print dmi_single_run_conditioned(X2, X4, z=z, z_delays=z_delays, d=2)
-# print rdi_single_run(X2, X4, d=2)
-# print rdi_single_run(X1,X2,d=1)
-# # print rdi_single_run(X2,X4,d=3)
-# # print rdi_single_run(X2,X4,d=5)
-# #
-# # print rdi_single_run(X3,X4,d=1)
-# print di_single_run(X1,X2,n=2)
-# print di_single_run(X2,X4)
-# print di_single_run(X3,X4)
-# print di_single_run(X1,X3)
-#
-# # print dmi_single_run(X2, X4, d=2)
-# # print dmi_single_run(X3, X4, d=1)
-#
-# z = {"A":X2,"B":X3}
-# z_delays = {"A":2,"B":1}
-# print rdi_single_run_conditioned(X1, X4, z=z, z_delays=z_delays, d=3)
-# print rdi_single_run(X1, X4, d=3)
-# print rdi_single_run(X3,X4,d=2)
-# print rdi_single_run(X3,X4,d=3)
-
-# mi_results = []
-# mi_results_x_scaled = []
-#
-# N = np.arange(50,1001,50)
-#
-# for n in N:
-#
-#     mi_results_tmp = 0
-#     mi_results_x_scaled_tmp = 0
-#     for repeat in range(100):
-#
-#         alpha = .99; alpha_tilda=np.sqrt(1-alpha**2)
-#         X = [[gauss(0,1)] for i in range(n)]
-#         Y = [[alpha*X[i][0]+alpha_tilda*gauss(0,1)] for i in range(n)]
-#         # Z = [[alpha*Y[i][0]+alpha_tilda*gauss(0,1)] for i in range(N)]
-#
-#         X_downscaled = [ [.1*i[0]] for i in X ]
-#         Y = [ [1*i[0]] for i in Y ]
-#         # Z = [ [abs(i[0])+1] for i in Z ]
-#
-#         mi_results_tmp += mi(X,Y)
-#         mi_results_x_scaled_tmp += mi(X_downscaled, Y)
-#
-#     mi_results += [mi_results_tmp/100]
-#     mi_results_x_scaled += [mi_results_x_scaled_tmp/100]
-#
-#     print n
-#
-# plt.plot(N, mi_results, "b", label="MI")
-# plt.plot(N, mi_results_x_scaled, "g", label="MI for x scaled")
-# plt.legend()
-# plt.xlabel("# of samples")
-# plt.show()
-
-
-#######################################################################################################################
-#######################################################################################################################
-
 def umi(x, y, k=5, density_estimation_method="kde", k_density=5, bw=.01):
+    """Calculates the uniformed mutual information where the distribution for :math:`x` is replaced by a uniform distribution.
+
+    `umi` takes two random variable x and y and estimated their mutual using the KSG estimator while x is replaced by a
+    uniform distribution.
+
+    Arguments
+    ---------
+        x: `List`
+            One random variable from the time-series data.
+        y: `List`
+            Another random variable from the time-series data.
+        k: `int` (Default: 5)
+            Number for nearest neighbors used in entropy calculation
+        density_estimation_method: `str` (Default: `kde`)
+            Which 2D density estimator you would like to use. `kde` is kde estimator while `knn` is knn based estimator.
+        k_density: `bool` (default: False)
+            The number of k nearest neighbors you would like to use when calculating the density (only applicable when
+            density_estimation_method is to be `knn` or using knn based density estimation).
+        bw: `float` (default: 0.1)
+            Bindwidth used for the kernel density estimator.
+
+    Returns
+    -------
+    A estimated uniform mutual information value between two variables (x, y) where the distribution for the x is replaced
+    by a uniform distribution.
+    """
     assert len(x) == len(y), "Lists should have same length"
     assert k <= len(x) - 1, "Set k smaller than num. samples - 1"
     N = len(x)
@@ -351,7 +324,36 @@ def alternate_umi(x, y, k=5, density_estimation_method="kde", k_density=5, bw=.2
 
 
 def cumi(x_orig, y_orig, z_orig, normalization=False, k=5, density_estimation_method="kde", k_density=5, bw=.01):
+    """Calculates the uniformed conditional mutual information where the distribution for :math:`x` and :math:`z` is replaced by a uniform distribution.
 
+    `cumi` takes two random variable :math:`x` and :math:`y` and estimated their mutual information conditioned on the
+    third random variable :math:`z` using the KSG estimator while :math:`x`, :math:`y` is replaced by a uniform distribution.
+
+    Arguments
+    ---------
+        x_orig: `List`
+            One random variable from the time-series data.
+        y_orig: `List`
+            Another random variable from the time-series data.
+        z_orig: `List`
+            Another random variable from the time-series data.
+        normalization: `bool` (Default: False)
+            Whether to normalize the expression of :math:`x, y, z` by their standard deviation.
+        k: `int` (Default: 5)
+            Number for nearest neighbors used in entropy calculation
+        density_estimation_method: `str` (Default: `kde`)
+            Which 2D density estimator you would like to use. `kde` is kde estimator while `knn` is knn based estimator.
+        k_density: `bool` (default: False)
+            The number of k nearest neighbors you would like to use when calculating the density (only applicable when
+            density_estimation_method is to be `knn` or using knn based density estimation).
+        bw: `float` (default: 0.01)
+            Bindwidth used for the kernel density estimator.
+
+    Returns
+    -------
+    A estimated conditional mutual information value between two variables (x, y), conditioning on a third variable z where
+    the distribution for the x, z is replaced by a uniform distribution.
+    """
     x = deepcopy(x_orig)
     y = deepcopy(y_orig)
     z = deepcopy(z_orig)

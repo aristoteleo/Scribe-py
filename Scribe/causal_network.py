@@ -1,7 +1,3 @@
-    ### Written by: ARMAN RAHIMZAMANI from University of Washington
-### armanrz@uw.edu
-
-# Import all the necessary modules
 import warnings
 import pandas
 import numpy as np
@@ -10,8 +6,6 @@ from multiprocessing import Pool
 from copy import deepcopy
 from .information_estimators import mi, cmi, cumi        #######added a '.'
 from .other_estimators import corr                         #####################3
-#from Scribe import granger,ccm
-
 
 ########################################################################################################################
 ########################################################################################################################
@@ -303,7 +297,7 @@ class causal_model(object):
     # An auxiliary private module which will extract the delays corresponding to the max rdi value calculated.
     # This module is used by CRDI
     def __extract_max_rdi_value_delay(self):
-
+        '''An auxiliary private module which will extract the delays corresponding to the max rdi value calculated.This module is used by CRDI'''
         max_rdi_value = pandas.DataFrame({node_id: [-np.inf for i in self.node_ids] for node_id in self.node_ids}, index=self.node_ids)
         max_rdi_delay = pandas.DataFrame({node_id: [np.nan for i in self.node_ids] for node_id in self.node_ids}, index=self.node_ids,
                                          dtype=np.int)
@@ -324,7 +318,7 @@ class causal_model(object):
     # An auxiliary private module which for each node, will extract the incoming nodes with the highest rdi values and
     # their corresponding delays. This module is used by CRDI
     def __extract_top_incoming_nodes_delays(self, max_rdi_values, max_rdi_delays, k_nodes):
-
+        '''An auxiliary private module which for each node, will extract the incoming nodes with the highest rdi values and their corresponding delays. This module is used by CRDI'''
         top_incoming_nodes = {destination_id: [None for i in range(k_nodes + 1)] for destination_id in self.node_ids}
         top_incoming_delays = {destination_id: [np.nan for i in range(k_nodes + 1)] for destination_id in self.node_ids}
         top_incoming_values = {destination_id: [-np.inf for i in range(k_nodes + 1)] for destination_id in self.node_ids}
@@ -345,7 +339,7 @@ class causal_model(object):
     ##############################################################################
     # Calculate and plot the ROC curve, and return the AUROC value
     def roc(self, results, true_graph_path):
-
+        '''Calculate and plot the ROC curve, and return the AUROC value'''
         # Reading the true graph
         true_edges = []
         truegraph_file = open(true_graph_path)
@@ -399,10 +393,22 @@ class causal_model(object):
         return auroc, x, y
 
 def Scribe_velocity(adata, genes = None, normalize = True, copy = False):
-    '''
-    add documentation 
-    '''
+    """Infer causal networks with velocity measurements.
 
+    Arguments
+    ---------
+    anndata: `anndata`
+        Annotated data matrix.
+    genes: `List`
+        If value is true, read anndata.X._scale, else anndata.X.
+    normalize: `bool`
+        Whether to scale the expression or velocity values into 0 to 1 before calculating causal networks.
+
+    Returns
+    ---------
+    ccm_results: `pd.core.frame.DataFrame`
+        The casual network inferred from velocity measurements.
+    """
     if genes == None: genes = np.unique(adata.obs['guide_name'].tolist())
     genes = np.setdiff1d(genes, ['*', 'nan', 'neg'])
     

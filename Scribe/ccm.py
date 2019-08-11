@@ -3,6 +3,29 @@
 from .pyccm import *
 
 def ccm(self, tau=1, E=None, periods=1, number_of_processes=1):
+    """Calculate causal network by CCM (Convergent Cross Mapping)
+    Uses a leave one out cross validation to calculate the predictability of X|Y and Y|X. It can be used to determine if
+    one time series contain the necessary dynamic information to recover the influence of another causal variable.
+
+    Arguments
+    ---------
+        self: 'class causal_model object'
+            An instance of a causal_model class object. This object can be converted from an AnnData object through
+            load_anndata function.
+        tau: 'np.ndarray'
+            Lag to use for time delay embedding.
+        E: 'np.ndarray'
+            Number of lags to include
+        periods: `int` (default: 1)
+            Number of periods.
+        number_of_processes: `int` (default: 1)
+            Number of cores to use.
+                
+    Returns
+    -------
+    ccm_results: 'pd.core.frame.DataFrame'
+        The casual network inferred from CCM algorithm.
+    """
 
     self.ccm_results = pandas.DataFrame({node_id: [np.nan for i in self.node_ids] for node_id in self.node_ids}, index=self.node_ids)
     if number_of_processes > 1: temp_input = []

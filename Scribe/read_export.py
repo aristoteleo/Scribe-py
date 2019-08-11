@@ -1,62 +1,87 @@
 '''
-Function to take data from anndata and append the data to expression_raw, etc. for running Scribe 
-AnnData object with n_obs × n_vars = 640 × 11 
+Function to take data from anndata and append the data to expression_raw, etc. for running Scribe
+AnnData object with n_obs × n_vars = 640 × 11
     obs: 'cell_type', 'dpt_pseudotime', 'dpt_groups', 'dpt_order', 'dpt_order_indices'
     uns: 'cell_type_colors', 'diffmap_evals', 'dpt_changepoints', 'dpt_groups_colors', 'dpt_grouptips', 'draw_graph', 'highlights', 'iroot', 'neighbors', 'tmax_write'
     obsm: 'X_tsne', 'X_draw_graph_fr', 'X_diffmap'
-''' 
-from . import causal_network            #################for ipython
+'''
+from . import causal_network
+from . import logging as logg
 import pandas as pd
 import numpy as np
 
-def load_anndata(anndata,is_scale=False,keys='dpt_groups'): # need to support multi-run next
+
+# append velocity data, etc. 
+def load_anndata(anndata, keys, is_scale=False):
+    """Convert an anndata object to a causal_model object.
+
+    Arguments
+    ---------
+    anndata: `anndata`
+        Annotated data matrix.
+    is_scale: `bool`
+        If value is true, read anndata.X._scale, else anndata.X.
+    keys: `str`
+        Column in obs used to set run id.
+
+    Returns
+    ---------
+    return: causal_network object.
+    """
+
     model =causal_network.causal_model()
+    logg.info('Read successful')
     if is_scale == False :
         expression_raw = anndata.X
     else:
         expression_raw = anndata.X._scale
-
-    df = pd.DataFrame(expression_raw.transpose(), index = anndata.var_names.values.tolist())
+    df = pd.DataFrame(expression_raw.transpose(), index = anndata.var_names.tolist())
     df.index.name = 'GENE_ID'
 
+    if "dpt_groups" in anndata.obs_keys(): # if pseudotime and branch of the dataset is assigned by scanpy, use the following 
+        branch_key, pseudotime_key = 'dpt_groups', 'dpt_pseudotime'
+    elif "Branch" in anndata.obs_keys():  # if pseudotime and branch of the dataset is assigned by Monocle, use the following
+        branch_key, pseudotime_key = 'Branch', 'Pseudotime' 
+    else:
+        Raise('Please first learn pseudotime / branch with Monocle or scanpy!')
 
-
-    if keys=='dpt_groups':
-        keys=anndata.obs.dpt_groups.transpose().values.tolist()
-        uniq_keys = anndata.obs.dpt_groups.unique()
+        keys=anndata.obs[branch_key].tolist()
+        uniq_keys = anndata.obs[branch_key].unique()
         uniq_keys = sorted(uniq_keys)
-    ############### i can add other obs_key here
 
-    for key in uniq_keys :
+        for key in uniq_keys:
+            if np.sum(anndata.obs[branch_key] == key) == 1:
+                continue
+            cur_id = np.where(np.array(keys) == str(key))
 
-        if key == '1':####################################################
-            continue
-        cur_id = np.where(np.array(keys) == str(key))
+            sort_cur_id = np.argsort(anndata.obs[pseudotime_key].iloc[cur_id].values)
 
-        sort_cur_id = np.argsort(anndata.obs.dpt_pseudotime.iloc[cur_id].values)
+            cur_expression_mat = df[df.columns[cur_id]] # Remember, Python is 0-offset! The "3rd" entry is at slot 2.
+            cur_expression_mat = cur_expression_mat[cur_expression_mat.columns[sort_cur_id]]
 
+            runid=np.array(df.index)
+            i=0
 
-        cur_expression_mat = df[df.columns[cur_id]] # Remember, Python is 0-offset! The "3rd" entry is at slot 2.
-        cur_expression_mat = cur_expression_mat[cur_expression_mat.columns[sort_cur_id]]
+            runid[:] = key 
+            
+            arrays=[df.index,runid]
+            index_col=pd.MultiIndex.from_arrays(arrays, names=('GINE_ID','RUN_ID'))
+            if key==uniq_keys[0]:
+                expression_mat_=pd.DataFrame(cur_expression_mat.values.tolist(),index=index_col)
+            else :
+                cur_expression_mat_=pd.DataFrame(cur_expression_mat.values.tolist(),index=index_col)
+                expression_mat_=pd.concat([expression_mat_,cur_expression_mat_],axis=0)
 
-        runid=np.array(df.index)
-        i=0
-        while i<len(df.index) :
-            runid[i]=key
-            i=i+1
-        arrays=[df.index,runid]
-        index_col=pd.MultiIndex.from_arrays(arrays, names=('GINE_ID','RUN_ID'))
-        if key=='0':
-            expression_mat_=pd.DataFrame(cur_expression_mat.values.tolist(),index=index_col)
-        else :
-            cur_expression_mat_=pd.DataFrame(cur_expression_mat.values.tolist(),index=index_col)
-            expression_mat_=pd.concat([expression_mat_,cur_expression_mat_],axis=0)
-
+    model.X = pd.DataFrame(np.transpose(anndata.X), index = anndata.var_names, columns = anndata.obs_names)
+    model.X = model.X[:, expression_mat_.columns]
     model.expression_raw = expression_mat_
     model.expression = expression_mat_
-    model.velocity = expression_mat_
+    model.unspliced = anndata.layers['unspliced'] if 'unspliced' in anndata.layers.keys() else None
+    model.spliced = anndata.layers['spliced'] if 'spliced' in anndata.layers.keys() else None
+    model.velocity = anndata.layers['velocity'] if 'velocity' in anndata.layers.keys() else None
     model.node_ids = expression_mat_.index.levels[0]
     model.run_ids = expression_mat_.index.levels[1]
+    
     return model
     
 # read loom, etc. 

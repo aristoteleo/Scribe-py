@@ -8,10 +8,12 @@ Created on Wed Jan 30 11:03:57 2019
 
 # from .AnnData import AnnData
 from .pyccm import *
-from . import CCM 
+#from . import CCM
 from . import granger 
 from . import information_estimators
 from . import kGC
 from . import other_estimators 
 from . import read_export
 from . import causal_network
+from . import logging
+from . import settings

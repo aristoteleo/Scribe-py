@@ -17,6 +17,7 @@ use::
     from scr.read_export import load_anndata,read
     adata = read(filename)
     model=load_anndata(adata)
+
 Data is a matrix. The rows is an index of GINE_ID with RUN_ID(Multiple index) and columns is cell number
 
 Before we calculate the gene causal network we must initialize
@@ -40,7 +41,12 @@ set::
 Computing CRDI is similar to the above process. Use **model.crdi()** just like rdi.
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+   :maxdepth: 5
+   :hidden:
+
+   modules
+   readme
+   changelog
+   API
 
 
