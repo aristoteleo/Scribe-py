@@ -1,2 +1,3 @@
-# scribe-py
-Regulatory networks with Direct Information in python
+# velocity_slam_seq
+Scribe + RNA velocity + slam-seq
+#velocity_slam_seq
