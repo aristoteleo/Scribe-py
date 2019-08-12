@@ -1,6 +1,15 @@
 import numpy as np
+import pandas
 from scipy.stats import pearsonr
+from multiprocessing import Pool
+from .granger import granger
 
+def __individual_granger(id1, id2, arr, maxlag):
+    return (id1, id2, granger(arr, maxlag=maxlag, addconst=True, verbose=False)[maxlag][0]["lrtest"][0])
+
+
+def __individual_kernel_granger(id1, id2, arr, type, param, maxlag):
+    return (id1, id2, KernelGrangerCausality(arr, type, param, maxlag))
 
 #######################################################
 #######################################################

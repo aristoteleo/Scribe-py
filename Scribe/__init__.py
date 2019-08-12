@@ -12,13 +12,12 @@ del get_version
 
 from . import pl
 
-# from .AnnData import AnnData
-from .pyccm import *
-from . import granger 
 from . import information_estimators
-from . import kGC
-from . import other_estimators 
-from . import read_export
 from . import causal_network
+from .pyccm import *
+from . import granger
+from . import kGC
+from . import other_estimators
+from . import read_export
 from . import logging
 from . import settings

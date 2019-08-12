@@ -1,6 +1,14 @@
 ##############################################################################
 # Run pairwise CCM over the data for the given delay
 from .pyccm import *
+import pandas
+import numpy as np
+from multiprocessing import Pool
+
+
+def __individual_ccm(id1, id2, arr, tau, E, periods):
+    return (id1, id2, ccm(arr, tau=tau, E=E, periods=periods)[id1 + '->' + id2])
+
 
 def ccm(self, tau=1, E=None, periods=1, number_of_processes=1):
     """Calculate causal network by CCM (Convergent Cross Mapping)

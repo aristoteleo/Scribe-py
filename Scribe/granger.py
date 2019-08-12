@@ -1,6 +1,15 @@
 ##############################################################################
 # Run pairwise Granger over the data for the given delay
 import statsmodels
+import numpy as np
+import pandas
+from multiprocessing import Pool
+
+
+def __individual_granger(id1, id2, arr, maxlag):
+    return (id1, id2, granger(arr, maxlag=maxlag, addconst=True, verbose=False)[maxlag][0]["lrtest"][0])
+
+
 def granger(self, maxlag=1, number_of_processes=1):
 
     self.granger_results = pandas.DataFrame({node_id: [np.nan for i in self.node_ids] for node_id in self.node_ids}, index=self.node_ids)

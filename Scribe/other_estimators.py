@@ -1,3 +1,16 @@
+import pandas
+import numpy as np
+from multiprocessing import Pool
+
+
+def __individual_corr(id1, id2, x, y):
+    return (id1, id2, corr(x, y)[0])
+
+
+def __individual_mi(id1, id2, x, y):
+    return (id1, id2, mi(x, y))
+
+
 def corr(self, number_of_processes=1):
     """Calculate pairwise correlation over the data
 

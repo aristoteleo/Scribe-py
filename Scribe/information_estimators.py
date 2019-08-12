@@ -1,16 +1,15 @@
-import time
 import scipy.spatial as ss
 from scipy.special import digamma,gamma
 from sklearn.neighbors import KernelDensity
 from math import log,pi,exp
 import numpy.random as nr
 import numpy as np
-from cvxopt import matrix,solvers
-from random import gauss, uniform, randint, expovariate
+# from cvxopt import matrix,solvers
+# from random import gauss, uniform, randint, expovariate
 from matplotlib import pyplot as plt
 # from misc import rank_order
 from copy import deepcopy
-from scipy.stats import rankdata
+# from scipy.stats import rankdata
 
 
 def vd(d):
@@ -277,6 +276,7 @@ def umi(x, y, k=5, density_estimation_method="kde", k_density=5, bw=.01):
         ans += -weight[i] * log(ny) / N
     return ans
 
+
 def alternate_umi(x, y, k=5, density_estimation_method="kde", k_density=5, bw=.2):
     assert len(x) == len(y), "Lists should have same length"
     assert k <= len(x) - 1, "Set k smaller than num. samples - 1"
@@ -402,8 +402,8 @@ def cumi(x_orig, y_orig, z_orig, normalization=False, k=5, density_estimation_me
         information_samples[i] += weight[i]* digamma( np.sum( weight[j] for j in tree_z.query_ball_point(z[i], knn_dis[i], p=np.inf)) - weight[i])
     return np.mean(information_samples)
 
-# CAPACITY ESTIMATORS
 
+# CAPACITY ESTIMATORS
 # Shannon capacity
 def sc(x, y, k=5, bw=0.2, init_weight_option=1, eta=0.5, lamb=100, T=10, method="grad", regularization_type="0" ,th=1e-3):
 
@@ -601,6 +601,7 @@ def csc(x, y, z, k=5, bw=0.2, init_weight_option=1, eta=0.5, lamb=100, T=10, reg
 
     return ans + get_obj(adj_xyz, adj_xz, adj_yz, adj_z, weight)
 
+
 def d_regularizer(weight):
     N = len(weight)
     ans = np.zeros(N)
@@ -609,12 +610,14 @@ def d_regularizer(weight):
         ans[i + 1] += weight[i + 1] - weight[i]
     return ans / N
 
+
 def d_regularizer_2(weight,window_size=2):
     N = len(weight)
     ans = np.zeros(N)
     for i in range(N):
         ans[i] = np.sum( weight[ max(0,i-window_size/2): min(N,i+window_size/2) ] ) / float(window_size)
     return ans
+
 
 def d_regularizer_3(weight,number_of_sections=100):
     N = len(weight)
@@ -625,6 +628,7 @@ def d_regularizer_3(weight,number_of_sections=100):
         for j in range(i*section_len,(i+1)*section_len):
             ans[j] = value
     return ans
+
 
 def projection(w, A, b):
     N = len(w)

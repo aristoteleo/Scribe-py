@@ -1,32 +1,11 @@
 import warnings
 import numpy as np
-import pandas
+import pandas as pd
 from multiprocessing import Pool
 
 from copy import deepcopy
-from .information_estimators import mi, cmi, cumi        #######added a '.'
-from .other_estimators import corr                         #####################3
+from .information_estimators import cmi, cumi
 
-########################################################################################################################
-########################################################################################################################
-def _rdi_causal_model__individual_mi(id1, id2, x, y):
-    return (id1, id2, mi(x, y))
-
-def _rdi_causal_model__individual_corr(id1, id2, x, y):
-    return (id1, id2, corr(x, y)[0])
-
-def _rdi_causal_model__individual_cmi(id1, id2, x, y, z, uniformization, differential_mode):
-    if uniformization==True: return (id1, id2, cumi(x, y, z, normalization=differential_mode))
-    else: return (id1, id2, cmi(x, y, z, normalization=differential_mode))
-
-def _rdi_causal_model__individual_ccm(id1, id2, arr, tau, E, periods):
-    return (id1, id2, ccm(arr, tau=tau, E=E, periods=periods)[id1 + '->' + id2])
-
-def _rdi_causal_model__individual_granger(id1, id2, arr, maxlag):
-    return (id1, id2, granger(arr, maxlag=maxlag, addconst=True, verbose=False)[maxlag][0]["lrtest"][0])
-
-def _rdi_causal_model__individual_kernel_granger(id1, id2, arr, type, param, maxlag):
-    return (id1, id2, KernelGrangerCausality(arr, type, param, maxlag))
 
 class causal_model(object):
     ''' This class defines an object for causal inference.
@@ -43,6 +22,8 @@ class causal_model(object):
         self.rdi_results = None
         self.crdi_results = None
 
+
+    # the following need to be refactored to use AnnData
     #############################################################################
     def read_expression_file(self, expression_path, data_mode, verbose=False, genotype_path=None, phenotype_path=None):
         '''
@@ -61,16 +42,16 @@ class causal_model(object):
 
 
         if data_mode == "single_run":
-            self.expression = pandas.read_table(expression_path, delimiter="\t", header=0, index_col="GENE_ID")
+            self.expression = pd.read_table(expression_path, delimiter="\t", header=0, index_col="GENE_ID")
             self.expression_raw = deepcopy(self.expression)
             self.node_ids = self.expression.index
             self.expression_concatenated = self.expression
         elif data_mode == "multi_run":
-            self.expression = pandas.read_table(expression_path, delimiter="\t", header=0, index_col=["GENE_ID", "RUN_ID"])
+            self.expression = pd.read_table(expression_path, delimiter="\t", header=0, index_col=["GENE_ID", "RUN_ID"])
             self.expression_raw = deepcopy(self.expression)
             self.node_ids = self.expression.index.levels[0]
             self.run_ids = self.expression.index.levels[1]
-            self.expression_concatenated = pandas.concat( [ pandas.DataFrame(self.expression.loc[node_id].values.reshape(1, -1), index=[node_id]) for node_id in self.node_ids ] )
+            self.expression_concatenated = pd.concat( [ pd.DataFrame(self.expression.loc[node_id].values.reshape(1, -1), index=[node_id]) for node_id in self.node_ids ] )
         else:
             raise ValueError("Data mode invalid")
 
@@ -109,7 +90,7 @@ class causal_model(object):
         else:
             index_set_tmp = [ index for index in self.expression.index if index[1] in subset]
             self.expression = self.expression.loc[index_set_tmp, :]
-            self.expression_concatenated = pandas.concat( [pandas.DataFrame(self.expression.loc[node_id].values.reshape(1, -1), index=[node_id]) for node_id in self.node_ids])
+            self.expression_concatenated = pd.concat( [pd.DataFrame(self.expression.loc[node_id].values.reshape(1, -1), index=[node_id]) for node_id in self.node_ids])
             self.run_ids = subset
 
     ##############################################################################
@@ -143,10 +124,17 @@ class causal_model(object):
         '''
         self.rdi_results = {}
 
+        def __individual_cmi(id1, id2, x, y, z, uniformization, differential_mode):
+            if uniformization==True:
+                return (id1, id2, cumi(x, y, z, normalization=differential_mode))
+            else:
+                return (id1, id2, cmi(x, y, z, normalization=differential_mode))
+
+
         for delay in delays:
             #print(self.node_ids)
             #print(delay)
-            self.rdi_results[delay] = pandas.DataFrame({node_id: [np.nan for i in self.node_ids] for node_id in self.node_ids}, index=self.node_ids)###made a nan fit matrix for rdi delay
+            self.rdi_results[delay] = pd.DataFrame({node_id: [np.nan for i in self.node_ids] for node_id in self.node_ids}, index=self.node_ids)###made a nan fit matrix for rdi delay
             if number_of_processes>1: temp_input = []
 
             for id1 in self.node_ids:
@@ -165,7 +153,7 @@ class causal_model(object):
                             y = [[self.expression.loc[id2].dropna()[j - 1] - self.expression.loc[id2].dropna()[j]] for j in range(1, len(self.expression.loc[id2].dropna()))][delay - 1:]
 
                         if number_of_processes == 1:
-                            self.rdi_results[delay].loc[id1, id2] = (_rdi_causal_model__individual_cmi(id1, id2, x, y, y_minus_1, uniformization, differential_mode))[2]
+                            self.rdi_results[delay].loc[id1, id2] = (__individual_cmi(id1, id2, x, y, y_minus_1, uniformization, differential_mode))[2]
                         else:
                             temp_input.append(id1, id2, x, y, y_minus_1, uniformization, differential_mode)
 
@@ -185,12 +173,12 @@ class causal_model(object):
                                 y += [[self.expression.loc[id2,run_id].dropna()[j-1]-self.expression.loc[id2,run_id].dropna()[j]] for j in range(1,len(self.expression.loc[id2,run_id].dropna()))][delay-1:]
 
                         if number_of_processes == 1:
-                            self.rdi_results[delay].loc[id1, id2] = (_rdi_causal_model__individual_cmi(id1, id2, x, y, y_minus_1, uniformization, differential_mode))[2]
+                            self.rdi_results[delay].loc[id1, id2] = (__individual_cmi(id1, id2, x, y, y_minus_1, uniformization, differential_mode))[2]
                         else:
                             temp_input.append((id1, id2, x, y, y_minus_1 ,uniformization, differential_mode))
 
             if number_of_processes>1 :
-                tmp_results = Pool(number_of_processes).map((_rdi_causal_model__individual_cmi), temp_input)
+                tmp_results = Pool(number_of_processes).map((__individual_cmi), temp_input)
                 for t in tmp_results: self.rdi_results[delay].loc[t[0], t[1]] = t[2]
 
         self.rdi_results["MAX"] = self.__extract_max_rdi_value_delay()[0]                        #########################not exist      self.__extract_max_rdi_value_delay()
@@ -218,12 +206,19 @@ class causal_model(object):
             warnings.warn("WARNING: The method first needs RDI to be run, RUNNING RDI NOW... delay set to [1]")
             self.rdi(delays=[1], number_of_processes=number_of_processes, uniformization=uniformization, differential_mode=differential_mode)
 
-        self.crdi_results = pandas.DataFrame({node_id: [np.nan for i in self.node_ids] for node_id in self.node_ids}, index=self.node_ids)
+        self.crdi_results = pd.DataFrame({node_id: [np.nan for i in self.node_ids] for node_id in self.node_ids}, index=self.node_ids)
         if number_of_processes > 1: temp_input = []
 
         [max_rdi_value, max_rdi_delay] = self.__extract_max_rdi_value_delay()
         [top_incoming_nodes, top_incoming_delays, top_incoming_values] = self.__extract_top_incoming_nodes_delays(
             max_rdi_value, max_rdi_delay, k_nodes=L)
+
+
+        def __individual_cmi(id1, id2, x, y, z, uniformization, differential_mode):
+            if uniformization==True:
+                return (id1, id2, cumi(x, y, z, normalization=differential_mode))
+            else:
+                return (id1, id2, cmi(x, y, z, normalization=differential_mode))
 
         for id1 in self.node_ids:
             for id2 in self.node_ids:
@@ -255,7 +250,7 @@ class causal_model(object):
                         y = [[self.expression.loc[id2].dropna()[j-1]-self.expression.loc[id2].dropna()[j]] for j in range(1,len(self.expression.loc[id2].dropna()))][tau-1:tau + total_length]
 
                     if number_of_processes == 1:
-                        self.crdi_results.loc[id1, id2] = (_rdi_causal_model__individual_cmi(id1, id2, x, y, yz, uniformization, differential_mode))[2]
+                        self.crdi_results.loc[id1, id2] = (__individual_cmi(id1, id2, x, y, yz, uniformization, differential_mode))[2]
                     else:
                         temp_input.append((id1, id2, x, y, yz, uniformization, differential_mode))
 
@@ -283,23 +278,24 @@ class causal_model(object):
                         yz += yz_tmp    #######################an array list
 
                     if number_of_processes == 1:
-                        self.crdi_results.loc[id1, id2] = (_rdi_causal_model__individual_cmi(id1, id2, x, y, yz, uniformization, differential_mode))[2]
+                        self.crdi_results.loc[id1, id2] = (__individual_cmi(id1, id2, x, y, yz, uniformization, differential_mode))[2]
                     else:
                         temp_input.append((id1, id2, x, y, yz, uniformization, differential_mode))
 
         if number_of_processes > 1:
-            tmp_results = Pool(number_of_processes).map((_rdi_causal_model__individual_cmi), temp_input)
+            tmp_results = Pool(number_of_processes).map((__individual_cmi), temp_input)
             for t in tmp_results: self.crdi_results.loc[t[0], t[1]] = t[2]
 
         return self.crdi_results
 
     ########################################
     # An auxiliary private module which will extract the delays corresponding to the max rdi value calculated.
+
     # This module is used by CRDI
     def __extract_max_rdi_value_delay(self):
         '''An auxiliary private module which will extract the delays corresponding to the max rdi value calculated.This module is used by CRDI'''
-        max_rdi_value = pandas.DataFrame({node_id: [-np.inf for i in self.node_ids] for node_id in self.node_ids}, index=self.node_ids)
-        max_rdi_delay = pandas.DataFrame({node_id: [np.nan for i in self.node_ids] for node_id in self.node_ids}, index=self.node_ids,
+        max_rdi_value = pd.DataFrame({node_id: [-np.inf for i in self.node_ids] for node_id in self.node_ids}, index=self.node_ids)
+        max_rdi_delay = pd.DataFrame({node_id: [np.nan for i in self.node_ids] for node_id in self.node_ids}, index=self.node_ids,
                                          dtype=np.int)
 
         for delay in self.rdi_results.keys():
@@ -391,68 +387,3 @@ class causal_model(object):
         # plt.show()
 
         return auroc, x, y
-
-def Scribe_velocity(adata, genes = None, normalize = True, copy = False):
-    """Infer causal networks with velocity measurements.
-
-    Arguments
-    ---------
-    anndata: `anndata`
-        Annotated data matrix.
-    genes: `List`
-        If value is true, read anndata.X._scale, else anndata.X.
-    normalize: `bool`
-        Whether to scale the expression or velocity values into 0 to 1 before calculating causal networks.
-
-    Returns
-    ---------
-    ccm_results: `pd.core.frame.DataFrame`
-        The casual network inferred from velocity measurements.
-    """
-    if genes == None: genes = np.unique(adata.obs['guide_name'].tolist())
-    genes = np.setdiff1d(genes, ['*', 'nan', 'neg'])
-    
-    idx_var = [vn in genes for vn in adata.var_names]
-    idx_var = np.argwhere(idx_var)
-    genes = adata.var_names.values[idx_var.flatten()].tolist() #[idx_var]
-    
-    # support sparse matrix: 
-    tmp = pd.DataFrame(adata.layers['spliced'].todense())
-    tmp.index = adata.obs_names
-    tmp.columns = adata.var_names
-    spliced = tmp.loc[:, genes]
-    tmp = pd.DataFrame(adata.layers['velocity']) # 
-    tmp.index = adata.obs_names
-    tmp.columns = adata.var_names
-    velocity = tmp.loc[:, genes]
-    velocity[pd.isna(velocity)] = 0 # set NaN value to 0 
-
-    if normalize == True:
-        spliced = (spliced - spliced.mean()) / (spliced.max() - spliced.min())
-        velocity = (velocity - velocity.mean()) / (velocity.max() - velocity.min())
-    
-    casual_net = pd.DataFrame({node_id: [np.nan for i in genes] for node_id in genes}, index=genes)
-
-    for g_a in genes:
-        for g_b in genes:
-            if g_a == g_b:
-                continue
-            else:
-                x_orig = spliced.loc[:, g_a].tolist()
-                y_orig = (spliced.loc[:, g_b] + velocity.loc[:, g_b]).tolist()
-                z_orig = velocity.loc[:, g_b].tolist()
-
-                # input to cmi is a list of list 
-                x_orig = [[i] for i in x_orig]
-                y_orig = [[i] for i in y_orig]
-                z_orig = [[i] for i in z_orig]
-                casual_net.loc[g_a, g_b] = cmi(x_orig, y_orig, z_orig)
-                
-    adata.uns['observation_causal_net'] = causal_net
-
-#     logg.info('     done', time = True, end = ' ' if settings.verbosity > 2 else '\n')
-#     logg.hint('perturbation_causal_net \n'
-#               '     matrix is added to adata.uns')
-
-    return adata if copy else None
-

@@ -108,7 +108,7 @@ def kde2d(x, y, h=None, n=25, lims=None):
 
 
 # understand the login information and use that for verbose
-def viz_response(adata, pairs_mat, log=False, delay=1, k=5, grid_num=25, n_row=None, n_col=1, scales="free",
+def viz_response(adata, pairs_mat, log=False, delay=1, k=5, grid_num=25, n_row=None, n_col=1, scales="free", return_data = False,
                       verbose=False):
     """Plot the lagged DREVI plot pairs of genes across pseudotime.
 
@@ -288,11 +288,12 @@ def viz_response(adata, pairs_mat, log=False, delay=1, k=5, grid_num=25, n_row=N
 
     plt.show()
 
-    return flat_res, flat_res_subset, ridge_curve_subset
+    if return_data:
+        return (flat_res, flat_res_subset, ridge_curve_subset)
 
 
-def viz_causality(adata, pairs_mat, log=False, delay=1, k=5, grid_num=25, n_row=None, n_col=1,
-                              scales="free", verbose=False):
+def viz_causality(adata, pairs_mat, log=False, delay=1, k=5, grid_num=25, n_row=None, n_col=1, scales="free", return_data = False,
+                  verbose=False):
     """Plot the heatmap for the expected value :math:`y(t)` given :math:`x(t - d)` and :math:`y(t - 1)`.
 
     This plotting function tries to intuitively visualize the informatioin transfer from :math:`x(t - d)` to :math:`y(t)`
@@ -445,9 +446,12 @@ def viz_causality(adata, pairs_mat, log=False, delay=1, k=5, grid_num=25, n_row=
     fig.colorbar(im, ax=axes)
     plt.show()
 
+    if return_data:
+        return flat_res
 
-def viz_comb_logic(adata, pairs_mat, log=False, delay=1, grid_num=25, n_row=None, n_col=1, normalized=True,
-                    scales="free", k=5, verbose=False):
+
+def viz_comb_logic(adata, pairs_mat, log=False, delay=1, grid_num=25, n_row=None, n_col=1, normalized=True, scales="free",
+                   k=5, return_data=False, verbose=False):
     """Plot the combinatorial influence of two genes :math:`x`, :math:`y` to the target :math:`z`.
 
     This plotting function tries to intuitively visualize the influence from genes :math:`x` and :math:`y` to the target :math:`z`.
@@ -595,3 +599,6 @@ def viz_comb_logic(adata, pairs_mat, log=False, delay=1, grid_num=25, n_row=None
 
     fig.colorbar(im, ax=axes)
     plt.show()
+
+    if return_data:
+        return flat_res
