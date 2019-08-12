@@ -1,314 +1,149 @@
-import numpy as np
-import pandas as pd
-import scipy
-import numpy.matlib as matlib
-import scipy.spatial as ss
-import copy
-from scipy.sparse import csr_matrix
-from scipy.sparse.linalg import eigs
-from igraph import *
-def sqdist (a,b):
-    """calculate the square distance between a, b
-
-    Arguments
-    ---------
-        a: 'np.ndarray'
-            A matrix with :math:`D \times N` dimension
-        b: 'np.ndarray'
-            A matrix with :math:`D \times N` dimension
-
-    Returns
-    -------
-    dist: 'np.ndarray'
-        A numeric value for the different between a and b
-    """
-    # sum(a**2).tolist()
-    # sum(b**2).tolist()
-    # np.matrix(a).T * np.matrix(b)   #crossprod
-    # rep_list = []
-    # for i in range(len(b.shape[1])):
-    #     rep_list = rep_list+[i for item in aa for i in item]
-    # aa_repmat = np.array(rep_list).reshape(b.shape[1],len(aa)).T
-    #
-    # for i in range(len(a.shape[1])):
-    #     rep_list = rep_list+[i for item in bb for i in item]
-    # bb_repmat = np.array(rep_list).reshape(a.shape[1],len(bb))
-    aa = np.sum(a**2, axis=0)
-    bb = np.sum(b**2, axis=0)
-    ab = a.T.dot(b)
-
-    aa_repmat = matlib.repmat(aa[:, None], 1, b.shape[1])
-    bb_repmat = matlib.repmat(bb[None, :], a.shape[1], 1)
-
-    dist = abs(aa_repmat + bb_repmat - 2 * ab)
-
-    return dist
-
-def repmat (X, m, n):
-    """This function returns an array containing m (n) copies of A in the row (column) dimensions. The size of B is
-    size(A)*n when A is a matrix.For example, repmat(np.matrix(1:4), 2, 3) returns a 4-by-6 matrix.
-
-    Arguments
-    ---------
-        X: 'np.ndarray'
-            An array like matrix.
-        m: 'int'
-            Number of copies on row dimension
-        n: 'int'
-            Number of copies on column dimension
-
-    Returns
-    -------
-    xy_rep: 'np.ndarray'
-        A matrix of repmat
-    """
-    # x_rep = X
-    # for i in range(n-1):
-    #     x_rep = np.hstack((x_rep,X))
-    # xy_rep = x_rep
-    # for i in range(m-1):
-    #     xy_rep = np.vstack((xy_rep,x_rep))
-    xy_rep = matlib.repmat(X, m, n)
-
-    return xy_rep
-
-def eye (m, n):
-    """Equivalent of eye (matlab)
-
-    Arguments
-    ---------
-        m: 'int'
-            Number of rows
-        n: 'int'
-            Number of columns
-
-    Returns
-    -------
-    mat: 'np.ndarray'
-        A matrix of eye
-    """
-    # mat = np.zeros((n,m))
-    # for i in range(min(len(mat), len(mat[0]))):
-    #     mat[i][i] = 1
-
-    mat = np.eye(m, n)
-    return mat
-
-#
-# def sqdist(a, b):
-#     """calculate the square distance between a, b
-#
-#     Arguments
-#     ---------
-#         a: 'np.ndarray'
-#             Array like matrix
-#         b: 'np.ndarray'
-#         Array like matrix
-#
-#     Returns
-#     -------
-#     dist: 'np.ndarray'
-#         The distance matrix
-#     """
-#     aa = sum(a ** 2).tolist()
-#     bb = sum(b ** 2).tolist()
-#     ab = np.matrix(a).T * np.matrix(b)  # crossprod
-#     rep_list = []
-#     for i in range(len(b.shape[1])):
-#         rep_list = rep_list + [i for item in aa for i in item]
-#     aa_repmat = np.array(rep_list).reshape(b.shape[1], len(aa)).T
-#
-#     for i in range(len(a.shape[1])):
-#         rep_list = rep_list + [i for item in bb for i in item]
-#     bb_repmat = np.array(rep_list).reshape(a.shape[1], len(bb))
-#     dist = abs(aa_repmat + bb_repmat - 2 * ab)
-#     return dist
-#
-# def repmat (X, m, n):
-#     """This function returns an array containing m (n) copies of A in the row (column) dimensions. The size of B is
-#     size(A)*n when A is a matrix.For example, repmat(np.matrix(1:4), 2, 3) returns a 4-by-6 matrix.
-#
-#     Arguments
-#     ---------
-#         X: 'np.ndarray'
-#             An array like matrix.
-#         m: 'int'
-#             Number of copies on row dimension
-#         n: 'int'
-#             Number of copies on column dimension
-#
-#     Returns
-#     -------
-#     xy_rep: 'np.ndarray'
-#         A matrix of repmat
-#     """
-#     x_rep = X
-#     for i in range(n-1):
-#         x_rep = np.hstack((x_rep,X))
-#     xy_rep = x_rep
-#     for i in range(m-1):
-#         xy_rep = np.vstack((xy_rep,x_rep))
-#
-#     return xy_rep
-#
-# def eye (m, n):
-#     """Equivalent of eye (matlab)
-#
-#     Arguments
-#     ---------
-#         m: 'int'
-#             Number of rows
-#         n: 'int'
-#             Number of columns
-#
-#     Returns
-#     -------
-#     mat: 'np.ndarray'
-#         A matrix of eye
-#     """
-#     mat = np.zeros((n,m))
-#     for i in range(min(len(mat), len(mat[0]))):
-#         mat[i][i] = 1
-#     return mat
+"""
+A minimalistic version helper in the spirit of versioneer, that is able to run without build step using pkg_resources.
+Developed by P Angerer, see https://github.com/flying-sheep/get_version.
+"""
+import re
+import os
+from pathlib import Path
+from subprocess import run, PIPE, CalledProcessError
+from typing import NamedTuple, List, Union, Optional
 
 
-def get_adjacency_MSTree(x):
-    '''Calculate the Minimum Spanning Tree'''
-
-    done_vertices = [0]
-    adj = csr_matrix(x.shape, dtype=np.float64)
-    while len(done_vertices) < x.shape[0]:
-        minNum = np.inf
-
-        for i in done_vertices:
-            for j in range(x.shape[0]):
-                if not (j in done_vertices):
-                    if j < i:
-                        num = x[i][j]
-                    elif j > i:
-                        num = x[j][i]
-                    else:
-                        num = np.inf
-                    if num < minNum:
-                        minNum = num
-                        index = j
-                        if i > j:
-                            index_i = i
-                            index_j = j
-                        else:
-                            index_i = j
-                            index_j = i
-        adj[index_i, index_j] = minNum
-        done_vertices = done_vertices + [index]
-    return adj.toarray()
+RE_VERSION = r"([\d.]+?)(?:\.dev(\d+))?(?:[_+-]([0-9a-zA-Z.]+))?"
+RE_GIT_DESCRIBE = r"v?(?:([\d.]+)-(\d+)-g)?([0-9a-f]{7})(-dirty)?"
+ON_RTD = os.environ.get("READTHEDOCS") == "True"
 
 
-def principal_tree (X, MU = None, Lambda = 1.0, bandwidth = None, maxIter = 100, verbose = False):
-    """Learn the principal tree from the same dimension of the noisy data.
+def match_groups(regex, target):
+    match = re.match(regex, target)
+    if match is None:
+        raise re.error(f"Regex does not match “{target}”. RE Pattern: {regex}", regex)
+    return match.groups()
 
-    Arguments
-    ---------
-        X: 'np.narray'
-            A matrix containing the original noisy data points
-        MU: 'np.narray'
-            A matrix
-        Lambda: 'float' (Default: 1.0)
-            XXXX
-        bandwidth: 'float' (Default: None)
-            Bandwidth
-        maxIter: `int` (Default: 100)
-            Maximal number of iteraction of principal tree algorithm
-        verbose: `bool` (Default: False)
-            A logic flag to determine whether or not running information should be returned.
 
-    Returns
-    -------
-    MU,stree,sigma,Lambda,history: `np.ndarray`, `np.ndarray`, `float`, `float`, `np.narray`
-        A tuple of four elements, including the final MU, stree, param.sigma, lambda and running history
-    """
-    D = X.shape[0]
-    N = X.shape[1]
-    old_obj = 0
+class Version(NamedTuple):
+    release: str
+    dev: Optional[str]
+    labels: List[str]
 
-    # initialize MU, lmabda
-    if not MU:
-        K = N
-        MU = X
-    else :
-        K = MU.shape[1]
+    @staticmethod
+    def parse(ver):
+        release, dev, labels = match_groups(f"{RE_VERSION}$", ver)
+        return Version(release, dev, labels.split(".") if labels else [])
 
-    Lambda = Lambda * N  # scale the parameter by N
+    def __str__(self):
+        release = self.release if self.release else "0.0"
+        dev = f".dev{self.dev}" if self.dev else ""
+        labels = f'+{".".join(self.labels)}' if self.labels else ""
+        return f"{release}{dev}{labels}"
 
-    if not bandwidth:
-        distsqX = sqdist(X, X)
-        sigma = 0.01 * sum(sum(distsqX)) / (N ** 2)
+
+def get_version_from_dirname(name, parent):
+    """Extracted sdist"""
+    parent = parent.resolve()
+
+    re_dirname = re.compile(f"{name}-{RE_VERSION}$")
+    if not re_dirname.match(parent.name):
+        return None
+
+    return Version.parse(parent.name[len(name) + 1 :])
+
+
+def get_version_from_git(parent):
+    parent = parent.resolve()
+
+    try:
+        p = run(["git", "rev-parse", "--show-toplevel"],
+                cwd=str(parent), stdout=PIPE, stderr=PIPE, encoding="utf-8", check=True)
+    except (OSError, CalledProcessError):
+        return None
+    if Path(p.stdout.rstrip("\r\n")).resolve() != parent.resolve():
+        return None
+
+    p = run(["git", "describe", "--tags", "--dirty", "--always", "--long", "--match", "v[0-9]*"],
+            cwd=str(parent), stdout=PIPE, stderr=PIPE, encoding="utf-8", check=True)
+
+    release, dev, hex_, dirty = match_groups(
+        f"{RE_GIT_DESCRIBE}$", p.stdout.rstrip("\r\n")
+    )
+
+    labels = []
+    if dev == "0":
+        dev = None
     else:
-        sigma = bandwidth
+        labels.append(hex_)
 
-    history = pd.DataFrame(index=[i for i in range(100)], columns=['mu', 'stree', 'objs', 'mse', 'length'])
-    for iter in range(maxIter):
-        # Kruskal method to find a spanning tree
-        distsMU = sqdist(MU, MU)
-        # distsMU_low = np.tril(distsMU)
-        # stree = get_adjacency_MSTree(distsMU_low)
-        gp = Graph.Weighted_Adjacency(distsMU.tolist(), ADJ_LOWER)
-        g_mst = gp.spanning_tree()
-        stree = np.array(g_mst.get_adjacency(type = GET_ADJACENCY_LOWER, attribute='weight')._get_data())
+    if dirty and not ON_RTD:
+        labels.append("dirty")
 
-        stree_ori = stree
-        stree = stree+stree.T
-        e = stree != 0
+    return Version(release, dev, labels)
 
-        history.iloc[iter]['mu'] = MU
 
-        # update data assignment matrix
-        distMUX = sqdist(MU, X)
-        # t = np.array([])
-        # for i in range(distMUX.shape[0]):
-        #     t = np.append(t, min(distMUX[i]))
-        # min_dist = repmat(t, K, 1)
-        min_dist = repmat(np.min(distMUX, 1), K, 1)
-        tmp_distMUX = distMUX - min_dist
-        tmp_R = np.exp(-tmp_distMUX.T/ sigma)
-        R = tmp_R / repmat(sum(tmp_R.T).reshape(-1, 1), 1, K)
+def get_version_from_metadata(name: str, parent: Optional[Path] = None):
+    try:
+        from pkg_resources import get_distribution, DistributionNotFound
+    except ImportError:
+        return None
 
-        # compute objective function
-        obj1 = - sigma * sum(np.log(sum(np.exp(- tmp_distMUX / sigma))) - min_dist[0, :] / sigma)
-        reg = sum(sum(stree))  # full
-        obj = (obj1 + 0.5 * Lambda * reg) / N
-        history.iloc[iter]['obj'] = obj
+    try:
+        pkg = get_distribution(name)
+    except DistributionNotFound:
+        return None
 
-        # t = np.array([])
-        # dist_tmp = distMUX.T
-        # for i in range(dist_tmp.shape[0]):
-        #     t = np.append(t, min(dist_tmp[i]))
-        # projd = t
-        projd = np.min(distMUX, 0)
-        mse = np.mean(projd)
+    # For an installed package, the parent is the install location
+    path_pkg = Path(pkg.location).resolve()
+    if parent is not None and path_pkg != parent.resolve():
+        msg = f"""\
+            metadata: Failed; distribution and package paths do not match:
+            {path_pkg}
+            !=
+            {parent.resolve()}\
+            """
+        return None
 
-        history.iloc[iter]['mse'] = mse
+    return Version.parse(pkg.version)
 
-        # length of the structure
-        history.iloc[iter]['length'] = reg
 
-        # terminate condition
-        if verbose:
-            print('iter=', iter, ', obj=', obj, ', mse=', mse, ', len=', reg)
-        if iter > 0:
-            if (abs((obj - old_obj) / old_obj) < 1e-3):
-                break
+def get_version(package: Union[Path, str]) -> str:
+    """Get the version of a package or module
+    Pass a module path or package name.
+    The former is recommended, since it also works for not yet installed packages.
+    Supports getting the version from
+    #. The directory name (as created by ``setup.py sdist``)
+    #. The output of ``git describe``
+    #. The package metadata of an installed package
+       (This is the only possibility when passing a name)
+    Args:
+       package: package name or module path (``…/module.py`` or ``…/module/__init__.py``)
+    """
+    path = Path(package)
+    if not path.suffix and len(path.parts) == 1:  # Is probably not a path
+        v = get_version_from_metadata(package)
+        if v:
+            return str(v)
 
-        L = np.diag(sum(e)) - np.array(e, dtype=int)
-        MU = X.dot(R).dot(scipy.linalg.inv(Lambda * L + np.diag(sum(R))))
+    if path.suffix != ".py":
+        msg = f"“package” is neither the name of an installed module nor the path to a .py file."
+        if path.suffix:
+            msg += f" Unknown file suffix {path.suffix}"
+        raise ValueError(msg)
+    if path.name == "__init__.py":
+        name = path.parent.name
+        parent = path.parent.parent
+    else:
+        name = path.with_suffix("").name
+        parent = path.parent
 
-        old_obj = obj
+    return str(
+        get_version_from_dirname(name, parent)
+        or get_version_from_git(parent)
+        or get_version_from_metadata(name, parent)
+        or "0.0.0"
+    )
 
-    return MU,stree,sigma,Lambda,history
 
-import scipy.io
-tmp = scipy.io.loadmat('/Users/xqiu/Downloads/PAMI2015-code/toy/tree_300.mat')
-X = tmp['X']
+__version__ = get_version(__file__)
 
-Lambda = 1
-bandwidth = 0.0050
-MU, stree, sigma, Lambda, history = principal_tree(X.T, MU = None, Lambda = Lambda, bandwidth = bandwidth, maxIter = 100, verbose = False);
+
+if __name__ == "__main__":
+    print(__version__)

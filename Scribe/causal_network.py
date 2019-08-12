@@ -1,6 +1,6 @@
 import warnings
-import pandas
 import numpy as np
+import pandas
 from multiprocessing import Pool
 
 from copy import deepcopy
