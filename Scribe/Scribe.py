@@ -1,5 +1,7 @@
 import pandas as pd
 import numpy as np
+from scipy.sparse import isspmatrix
+
 from .causal_network import cmi
 
 def causal_net_dynamics_coupling(adata, genes=None, guide_keys=None, t0_key='spliced', t1_key='velocity', normalize=True, copy=False):
@@ -36,7 +38,7 @@ def causal_net_dynamics_coupling(adata, genes=None, guide_keys=None, t0_key='spl
     normalize: `bool`
         Whether to scale the expression or velocity values into 0 to 1 before calculating causal networks.
     copy: `bool`
-        Whether to return a copy of the adata or just update adata in place. 
+        Whether to return a copy of the adata or just update adata in place.
 
     Returns
     ---------
@@ -55,11 +57,11 @@ def causal_net_dynamics_coupling(adata, genes=None, guide_keys=None, t0_key='spl
         genes = adata.var_names.values[idx_var.flatten()].tolist() #[idx_var]
 
     # support sparse matrix:
-    tmp = pd.DataFrame(adata.layers[t0_key].todense())
+    tmp = pd.DataFrame(adata.layers[t0_key].todense()) if isspmatrix(adata.layers[t0_key]) else pd.DataFrame(adata.layers[t0_key])
     tmp.index = adata.obs_names
     tmp.columns = adata.var_names
     spliced = tmp.loc[:, genes]
-    tmp = pd.DataFrame(adata.layers[t1_key]) #
+    tmp = pd.DataFrame(adata.layers[t1_key].todense()) if isspmatrix(adata.layers[t1_key]) else pd.DataFrame(adata.layers[t1_key])
     tmp.index = adata.obs_names
     tmp.columns = adata.var_names
     velocity = tmp.loc[:, genes]

@@ -12,6 +12,8 @@ del get_version
 
 from . import pl
 
+from . import Scribe
+
 from . import information_estimators
 from . import causal_network
 from .pyccm import *
