@@ -12,17 +12,17 @@ import numpy as np
 
 
 # append velocity data, etc. 
-def load_anndata(anndata, keys, is_scale=False):
+def load_anndata(anndata, keys='dpt_groups', is_scale=False):
     """Convert an anndata object to a causal_model object.
 
     Arguments
     ---------
     anndata: `anndata`
         Annotated data matrix.
-    is_scale: `bool`
-        If value is true, read anndata.X._scale, else anndata.X.
     keys: `str`
         Column in obs used to set run id.
+    is_scale: `bool`
+        If value is true, read anndata.X._scale, else anndata.X.
 
     Returns
     ---------

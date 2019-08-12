@@ -8,7 +8,7 @@ import scipy.spatial as ss
 import seaborn
 from ..logging import info
 
-from Scribe.read_export import load_anndata
+from ..read_export import load_anndata
 
 
 def bandwidth_nrd(x):
