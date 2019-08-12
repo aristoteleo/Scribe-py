@@ -31,6 +31,8 @@ def load_anndata(anndata, is_scale=False):
 
     model =causal_network.causal_model()
     logg.info('Create causal_model successfully')
+
+    order_exprs_mat = True
     if is_scale == False :
         expression_raw = anndata.X
     else:
@@ -43,34 +45,37 @@ def load_anndata(anndata, is_scale=False):
     elif "Branch" in anndata.obs_keys():  # if pseudotime and branch of the dataset is assigned by Monocle, use the following
         branch_key, pseudotime_key = 'Branch', 'Pseudotime' 
     else:
-        raise('Please first learn pseudotime / branch with Monocle or scanpy!')
+        order_exprs_mat = False
 
-    keys=anndata.obs[branch_key].tolist()
-    uniq_keys = anndata.obs[branch_key].unique()
-    uniq_keys = sorted(uniq_keys)
+    if order_exprs_mat:
+        keys=anndata.obs[branch_key].tolist()
+        uniq_keys = anndata.obs[branch_key].unique()
+        uniq_keys = sorted(uniq_keys)
 
-    for key in uniq_keys:
-        if np.sum(anndata.obs[branch_key] == key) == 1:
-            continue
-        cur_id = np.where(np.array(keys) == str(key))
+        for key in uniq_keys:
+            if np.sum(anndata.obs[branch_key] == key) == 1:
+                continue
+            cur_id = np.where(np.array(keys) == str(key))
 
-        sort_cur_id = np.argsort(anndata.obs[pseudotime_key].iloc[cur_id].values)
+            sort_cur_id = np.argsort(anndata.obs[pseudotime_key].iloc[cur_id].values)
 
-        cur_expression_mat, cur_obs_name = df[df.columns[cur_id]], anndata.obs_names[cur_id] # Remember, Python is 0-offset! The "3rd" entry is at slot 2.
-        cur_expression_mat, cur_obs_name = cur_expression_mat[cur_expression_mat.columns[sort_cur_id]], cur_obs_name[sort_cur_id]
+            cur_expression_mat, cur_obs_name = df[df.columns[cur_id]], anndata.obs_names[cur_id] # Remember, Python is 0-offset! The "3rd" entry is at slot 2.
+            cur_expression_mat, cur_obs_name = cur_expression_mat[cur_expression_mat.columns[sort_cur_id]], cur_obs_name[sort_cur_id]
 
-        runid=np.array(df.index)
-        i=0
+            runid=np.array(df.index)
+            i=0
 
-        runid[:] = key
+            runid[:] = key
 
-        arrays=[df.index,runid]
-        index_col=pd.MultiIndex.from_arrays(arrays, names=('GINE_ID','RUN_ID'))
-        if key==uniq_keys[0]:
-            expression_mat_=pd.DataFrame(cur_expression_mat.values.tolist(),index=index_col) # , columns=cur_obs_name
-        else :
-            cur_expression_mat_=pd.DataFrame(cur_expression_mat.values.tolist(),index=index_col) # , columns=cur_obs_name
-            expression_mat_=pd.concat([expression_mat_,cur_expression_mat_],axis=0)
+            arrays=[df.index,runid]
+            index_col=pd.MultiIndex.from_arrays(arrays, names=('GINE_ID','RUN_ID'))
+            if key==uniq_keys[0]:
+                expression_mat_=pd.DataFrame(cur_expression_mat.values.tolist(),index=index_col) # , columns=cur_obs_name
+            else :
+                cur_expression_mat_=pd.DataFrame(cur_expression_mat.values.tolist(),index=index_col) # , columns=cur_obs_name
+                expression_mat_=pd.concat([expression_mat_,cur_expression_mat_],axis=0)
+    else:
+        expression_mat_ = expression_raw
 
     model.X = pd.DataFrame(np.transpose(anndata.X), index=anndata.var_names, columns=anndata.obs_names)
     model.expression_raw = expression_mat_
@@ -78,9 +83,15 @@ def load_anndata(anndata, is_scale=False):
     model.unspliced = anndata.layers['unspliced'] if 'unspliced' in anndata.layers.keys() else None
     model.spliced = anndata.layers['spliced'] if 'spliced' in anndata.layers.keys() else None
     model.velocity = anndata.layers['velocity'] if 'velocity' in anndata.layers.keys() else None
-    model.node_ids = expression_mat_.index.levels[0]
-    model.run_ids = expression_mat_.index.levels[1]
-    
+
+    if order_exprs_mat:
+        model.node_ids = expression_mat_.index.levels[0]
+        model.run_ids = expression_mat_.index.levels[1]
+    else:
+        model.node_ids = anndata.var_names.to_list()
+        model.run_ids = [0]
+
+
     return model
     
 # # read loom, etc.

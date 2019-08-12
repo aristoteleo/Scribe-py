@@ -197,7 +197,7 @@ def viz_response(adata, pairs_mat, log=False, delay=1, k=5, grid_num=25, n_row=N
         y_ori = [i for i in sub_data.loc[gene_pairs[1]].dropna()]
 
         if log:
-            x, y_ori = np.log(x + 1), np.log(y_ori + 1)
+            x, y_ori = np.log(np.array(x) + 1), np.log(np.array(y_ori) + 1)
 
         if delay != 0:
             x = x[:-delay]
@@ -365,7 +365,7 @@ def viz_causality(adata, pairs_mat, log=False, delay=1, k=5, grid_num=25, n_row=
         y_ori = [i for i in sub_data.loc[gene_pairs[1]].dropna()]
 
         if log:
-            x, y_ori = np.log(x + 1), np.log(y_ori + 1)
+            x, y_ori = np.log(np.array(x) + 1), np.log(np.array(y_ori) + 1)
 
         if delay != 0:
             x = x[:-delay]

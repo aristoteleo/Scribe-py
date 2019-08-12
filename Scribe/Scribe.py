@@ -79,7 +79,7 @@ def causal_net_dynamics_coupling(adata, genes=None, guide_keys=None, t0_key='spl
                 continue
             else:
                 x_orig = spliced.loc[:, g_a].tolist()
-                y_orig = (spliced.loc[:, g_b] + velocity.loc[:, g_b]).tolist()
+                y_orig = (spliced.loc[:, g_b] + velocity.loc[:, g_b]).tolist() if t1_key is 'velocity' else spliced.loc[:, g_b].tolist()
                 z_orig = velocity.loc[:, g_b].tolist()
 
                 # input to cmi is a list of list
