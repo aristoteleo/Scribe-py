@@ -1,6 +1,5 @@
 from setuptools import setup, find_packages
 import numpy as np
-from version import __version__ 
 from get_version import get_version 
 
 with open("README.md", "r") as fh:

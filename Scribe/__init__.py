@@ -8,7 +8,7 @@ Created on Wed Jan 30 11:03:57 2019
 
 # from .AnnData import AnnData
 from .pyccm import *
-#from . import CCM
+from .plot import *
 from . import granger 
 from . import information_estimators
 from . import kGC
