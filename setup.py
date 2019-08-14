@@ -10,7 +10,7 @@ setup(
     __version__ = get_version(__file__),
     install_requires=['cvxopt>=1.2.3', 'pandas>=0.23.0', 'numpy>=1.14', 'scipy>=1.0', 'scikit-learn>=0.19.1', 
                       'pyccm>=0.4', 'statsmodels>=0.9.0', 'scanpy>=1.3.3', 'anndata>=0.6.18', 'loompy>=2.0.12', 
-                      'matplotlib>=2.2', 'seaborn>=0.9.0', 'setuptools'],
+                      'matplotlib>=2.2', 'seaborn>=0.9.0', 'networkx>=2.3', 'setuptools'],
     packages=find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
