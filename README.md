@@ -19,9 +19,21 @@ pip install git+https://github.com:aristoteleo/Scribe-py
 ## Citation
 Xiaojie Qiu, Arman Rahimzamani, Li Wang, Qi Mao, Timothy Durham, Jose L McFaline-Figueroa, Lauren Saunders, Cole Trapnell, Sreeram Kannan (2018): Towards inferring causal gene regulatory networks from single cell expression measurements. BioRxiv
 
+Cell Systems link: https://www.sciencedirect.com/science/article/abs/pii/S2405471220300363 (downloadable from here: http://cole-trapnell-lab.github.io/papers/qiu-scribe/)
+
 biorxiv link: https://www.biorxiv.org/content/early/2018/09/25/426981
 
 twitter link: https://twitter.com/coletrapnell/status/1044986820520435712
+
+## R version
+A R version of this package is available at: https://github.com/cole-trapnell-lab/Scribe. Note that I have graduated Cole's lab and 
+won't maintain this package anymore. If anyone wants to maintain it and keep it updated. Please let me know (email: xqiu.sc@gmail.com).  
+
+## Integration with Scribe and Dynamo
+I am recently working on developing a new framework that tries to go beyond RNA velocity to map the full vector field of single cells. 
+You may find this project interesting (https://github.com/aristoteleo/dynamo-release). In a month or two, Scribe will be fully integrated 
+with Dynamo, so stayed tuned. 
+
 
 ## Contribution 
 If you want to contribute to the development of Scribe, please check out CONTRIBUTION instruction: [Contribution](https://github.com/aristoteleo/Scribe-py/blob/master/CONTRIBUTING.md)
