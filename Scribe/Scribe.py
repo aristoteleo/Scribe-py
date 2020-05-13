@@ -1,10 +1,11 @@
+from tqdm import tqdm
 import pandas as pd
 import numpy as np
 from scipy.sparse import isspmatrix
 
 from .causal_network import cmi
 
-def causal_net_dynamics_coupling(adata, genes=None, guide_keys=None, t0_key='spliced', t1_key='velocity', normalize=True, copy=False):
+def causal_net_dynamics_coupling(adata, TFs=None, Targets=None, guide_keys=None, t0_key='spliced', t1_key='velocity', normalize=True, copy=False):
     """Infer causal networks with dynamics-coupled single cells measurements.
     Network inference is a insanely challenging problem which has a long history and that none of the existing algorithms work well.
     However, it's quite possible that one or more of the algorithms could work if only they were given enough data. Single-cell
@@ -25,8 +26,10 @@ def causal_net_dynamics_coupling(adata, genes=None, guide_keys=None, t0_key='spl
     ---------
     adata: `anndata`
         Annotated data matrix.
-    genes: `List`
-        The list of gene names that will be used for casual network inference.
+    TFs: `List` or `None` (default: None)
+        The list of transcription factors that will be used for casual network inference.
+    Targets: `List` or `None` (default: None)
+        The list of target genes that will be used for casual network inference.
     guide_keys: `List` (default: None)
         The key of the CRISPR-guides, stored as a column in the .obs attribute. This argument is useful
         for identifying the knockout or knockin genes for a perturb-seq experiment. Currently not used.
@@ -43,39 +46,58 @@ def causal_net_dynamics_coupling(adata, genes=None, guide_keys=None, t0_key='spl
 
     Returns
     ---------
-    An update AnnData object with inferred causal network stored as a matrix related to the key `causal_net` in the `uns` slot.
+        An update AnnData object with inferred causal network stored as a matrix related to the key `causal_net` in the `uns` slot.
     """
 
-    if genes is None and guide_keys is None:
-        genes = adata.var_names.values.tolist()
+    genes = None
+    if TFs is None:
+        TFs = adata.var_names
+    else:
+        TFs = adata.var_names.intersection(TFs).tolist()
+        if len(TFs) > 0:
+            genes = TFs
+        else:
+            raise Exception(f"The adata object has no gene names from .var_name that intersects with the TFs list you provided")
+
+    if Targets is None:
+        Targets = adata.var_names
+    else:
+        Targets = adata.var_names.intersection(Targets).tolist()
+        if len(Targets) > 0:
+            genes = Targets if genes is None else genes + Targets
+        else:
+            raise Exception(f"The adata object has no gene names from .var_name that intersect with the Targets list you provided")
 
     if guide_keys is not None:
-        genes = np.unique(adata.obs[guide_keys].tolist())
-        genes = np.setdiff1d(genes, ['*', 'nan', 'neg'])
+        guides = np.unique(adata.obs[guide_keys].tolist())
+        guides = np.setdiff1d(guides, ['*', 'nan', 'neg'])
 
-        idx_var = [vn in genes for vn in adata.var_names]
+        idx_var = [vn in guides for vn in adata.var_names]
         idx_var = np.argwhere(idx_var)
-        genes = adata.var_names.values[idx_var.flatten()].tolist()
+        guides = adata.var_names.values[idx_var.flatten()].tolist()
 
     # support sparse matrix:
-    tmp = pd.DataFrame(adata.layers[t0_key].todense()) if isspmatrix(adata.layers[t0_key]) else pd.DataFrame(adata.layers[t0_key])
+    tmp = pd.DataFrame(adata[:, genes].layers[t0_key].todense()) if isspmatrix(adata.layers[t0_key]) \
+        else pd.DataFrame(adata[:, genes].layers[t0_key])
     tmp.index = adata.obs_names
-    tmp.columns = adata.var_names
-    spliced = tmp.loc[:, genes]
-    tmp = pd.DataFrame(adata.layers[t1_key].todense()) if isspmatrix(adata.layers[t1_key]) else pd.DataFrame(adata.layers[t1_key])
+    tmp.columns = adata[:, genes].var_names
+    spliced = tmp
+
+    tmp = pd.DataFrame(adata[:, genes].layers[t1_key].todense()) if isspmatrix(adata.layers[t1_key]) \
+        else pd.DataFrame(adata[:, genes].layers[t1_key])
     tmp.index = adata.obs_names
-    tmp.columns = adata.var_names
-    velocity = tmp.loc[:, genes]
+    tmp.columns = adata[:, genes].var_names
+    velocity = tmp
     velocity[pd.isna(velocity)] = 0  # set NaN value to 0
 
     if normalize:
         spliced = (spliced - spliced.mean()) / (spliced.max() - spliced.min())
         velocity = (velocity - velocity.mean()) / (velocity.max() - velocity.min())
 
-    causal_net = pd.DataFrame({node_id: [np.nan for i in genes] for node_id in genes}, index=genes)
+    causal_net = pd.DataFrame({node_id: [np.nan for i in TFs] for node_id in Targets}, index=TFs)
 
-    for g_a in genes:
-        for g_b in genes:
+    for g_a in tqdm(TFs, desc=f"Calculate causality score (RDI) from each TF to potential target:"):
+        for g_b in Targets:
             if g_a == g_b:
                 continue
             else:
