@@ -26,9 +26,10 @@ def causal_net_dynamics_coupling(adata, genes=None, guide_keys=None, t0_key='spl
     adata: `anndata`
         Annotated data matrix.
     genes: `List`
-
+        The list of gene names that will be used for casual network inference.
     guide_keys: `List` (default: None)
-        Whether to scale the expression or velocity values into 0 to 1 before calculating causal networks.
+        The key of the CRISPR-guides, stored as a column in the .obs attribute. This argument is useful
+        for identifying the knockout or knockin genes for a perturb-seq experiment. Currently not used.
     t0_key: `str` (default: spliced)
         Key corresponds to the transcriptome of the initial time point, for example spliced RNAs from RNA velocity, old RNA
         from scSLAM-seq data.
@@ -54,7 +55,7 @@ def causal_net_dynamics_coupling(adata, genes=None, guide_keys=None, t0_key='spl
 
         idx_var = [vn in genes for vn in adata.var_names]
         idx_var = np.argwhere(idx_var)
-        genes = adata.var_names.values[idx_var.flatten()].tolist() #[idx_var]
+        genes = adata.var_names.values[idx_var.flatten()].tolist()
 
     # support sparse matrix:
     tmp = pd.DataFrame(adata.layers[t0_key].todense()) if isspmatrix(adata.layers[t0_key]) else pd.DataFrame(adata.layers[t0_key])
@@ -65,7 +66,7 @@ def causal_net_dynamics_coupling(adata, genes=None, guide_keys=None, t0_key='spl
     tmp.index = adata.obs_names
     tmp.columns = adata.var_names
     velocity = tmp.loc[:, genes]
-    velocity[pd.isna(velocity)] = 0 # set NaN value to 0
+    velocity[pd.isna(velocity)] = 0  # set NaN value to 0
 
     if normalize:
         spliced = (spliced - spliced.mean()) / (spliced.max() - spliced.min())
@@ -79,8 +80,8 @@ def causal_net_dynamics_coupling(adata, genes=None, guide_keys=None, t0_key='spl
                 continue
             else:
                 x_orig = spliced.loc[:, g_a].tolist()
-                y_orig = (spliced.loc[:, g_b] + velocity.loc[:, g_b]).tolist() if t1_key is 'velocity' else spliced.loc[:, g_b].tolist()
-                z_orig = velocity.loc[:, g_b].tolist()
+                y_orig = (spliced.loc[:, g_b] + velocity.loc[:, g_b]).tolist() if t1_key is 'velocity' else velocity.loc[:, g_b].tolist()
+                z_orig = spliced.loc[:, g_b].tolist()
 
                 # input to cmi is a list of list
                 x_orig = [[i] for i in x_orig]
