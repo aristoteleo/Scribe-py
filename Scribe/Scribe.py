@@ -4,6 +4,8 @@ import numpy as np
 from scipy.sparse import isspmatrix
 
 from .causal_network import cmi
+CLR_DDOF = 1
+
 
 def causal_net_dynamics_coupling(adata, TFs=None, Targets=None, guide_keys=None, t0_key='spliced', t1_key='velocity', normalize=True, copy=False):
     """Infer causal networks with dynamics-coupled single cells measurements.
@@ -119,3 +121,42 @@ def causal_net_dynamics_coupling(adata, TFs=None, Targets=None, guide_keys=None,
 
     return adata if copy else None
 
+def CLR(causality_mat, zscore_both_dim=None):
+    """Calculate the context liklihood of relatedness from mutual information. Note that the background mutual information
+    uses the same data. code adapted from https://github.com/flatironinstitute/inferelator/blob/master/inferelator/regression/mi.py"""
+
+    # if symmetric, then it is non-directional; otherwise it is directional
+    zscore_both_dim = check_symmetric(causality_mat) if zscore_both_dim is None else zscore_both_dim
+    mat = mm.values if isinstance(causality_mat, pd.DataFrame) else mm.A if isspmatrix(mm) else mm
+
+    # Calculate the zscore for rows
+    z_row = np.round(mat, 10)  # Rounding so that float precision differences don't turn into huge CLR differences
+    z_row = np.subtract(z_row, np.mean(mat, axis=1))
+    z_row = np.divide(z_row, np.std(mat, axis=1, ddof=CLR_DDOF))
+    z_row[z_row < 0] = 0
+
+    if zscore_both_dim:
+        z_col = np.round(mat, 10)  # Rounding so that float precision differences don't turn into huge CLR differences
+        z_col = np.subtract(z_col, np.mean(mat, axis=0))
+        z_col = np.divide(z_col, np.std(mat, axis=0, ddof=CLR_DDOF))
+
+        z_col[z_col < 0] = 0
+
+        res = np.sqrt((np.square(z_row) + np.square(z_col)) / 2)
+    else:
+        res = np.sqrt(np.square(z_row))
+
+    if isinstance(causality_mat, pd.DataFrame):
+        res = pd.DataFrame(res)
+        res.index, res.columns = causality_mat.index, causality_mat.columns
+
+    return res
+
+def check_symmetric(a, rtol=1e-05, atol=1e-08):
+    if isinstance(causality_mat, pd.DataFrame): a = a.values
+    if isspmatrix(a):
+        res = (abs(Ms-Ms.T) > atol).nnz == 0
+    else:
+        res = np.allclose(a, a.T, rtol=rtol, atol=atol)
+
+    return res

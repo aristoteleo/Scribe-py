@@ -787,13 +787,13 @@ def cumi_partitioning(x, y, z, no_partitions):
 # print umi(X, Y, density_estimation_method="knn")
 # # print alternate_umi(X, Y, density_estimation_method="knn")
 
-# N = 1000
-# u_max = .2
-#
-# n=5
-# X = [ [uniform(0,1)**n] for i in range(N) ]
-# Z = [ [uniform(0,1)**n] for i in range(N) ]
-# Y = [ [ (X[i][0] +Z[i][0] +uniform(0,u_max)) ] for i in range(N) ]
+N = 1000
+u_max = .2
+
+n=5
+X = [ [uniform(0,1)**n] for i in range(N) ]
+Z = [ [uniform(0,1)**n] for i in range(N) ]
+Y = [ [ (X[i][0] +Z[i][0] +uniform(0,u_max)) ] for i in range(N) ]
 #
 # # print cumi(X,Y,Z)
 # print cumi_partitioning(X,Y,Z,no_partitions=25)
