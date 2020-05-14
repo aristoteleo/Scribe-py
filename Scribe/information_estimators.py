@@ -764,36 +764,3 @@ def cumi_partitioning(x, y, z, no_partitions):
 
     return ans
 
-
-
-# N = 5000
-# alpha = .99; alpha_tilda=np.sqrt(1-alpha**2)
-# X = [[gauss(0,1)] for i in range(N)]
-# Y = [[alpha*X[i][0]+alpha_tilda*gauss(0,1)] for i in range(N)]
-# Z = [[alpha*Y[i][0]+alpha_tilda*gauss(0,1)] for i in range(N)]
-# print mi(X,Y)
-# print mi_alternate(X,Y)
-
-# N = 1000
-# u_max = .2
-# X = [ [ uniform(0,1)**1 ] for cnt in range(N) ]
-# Y = [ [ ( X[cnt][0] + uniform(0,u_max) ) ] for cnt in range(N) ]
-# print mi(X,Y)
-# print umi(X,Y, density_estimation_method="knn")
-# # print alternate_umi(X,Y, density_estimation_method="knn")
-#
-# X = [[uniform(0, 1)**15 ] for cnt in range(N)]
-# Y = [[(X[cnt][0] + uniform(0, u_max))] for cnt in range(N)]
-# print umi(X, Y, density_estimation_method="knn")
-# # print alternate_umi(X, Y, density_estimation_method="knn")
-
-N = 1000
-u_max = .2
-
-n=5
-X = [ [uniform(0,1)**n] for i in range(N) ]
-Z = [ [uniform(0,1)**n] for i in range(N) ]
-Y = [ [ (X[i][0] +Z[i][0] +uniform(0,u_max)) ] for i in range(N) ]
-#
-# # print cumi(X,Y,Z)
-# print cumi_partitioning(X,Y,Z,no_partitions=25)
