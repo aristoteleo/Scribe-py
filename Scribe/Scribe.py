@@ -127,18 +127,19 @@ def CLR(causality_mat, zscore_both_dim=None):
 
     # if symmetric, then it is non-directional; otherwise it is directional
     zscore_both_dim = check_symmetric(causality_mat) if zscore_both_dim is None else zscore_both_dim
-    mat = mm.values if isinstance(causality_mat, pd.DataFrame) else mm.A if isspmatrix(mm) else mm
+    mat = causality_mat.values if isinstance(causality_mat, pd.DataFrame) else causality_mat.A \
+        if isspmatrix(causality_mat) else causality_mat
 
     # Calculate the zscore for rows
     z_row = np.round(mat, 10)  # Rounding so that float precision differences don't turn into huge CLR differences
-    z_row = np.subtract(z_row, np.mean(mat, axis=1))
-    z_row = np.divide(z_row, np.std(mat, axis=1, ddof=CLR_DDOF))
+    z_row = np.subtract(z_row, np.mean(mat, axis=1)[:, None])
+    z_row = np.divide(z_row, np.std(mat, axis=1, ddof=CLR_DDOF)[:, None])
     z_row[z_row < 0] = 0
 
     if zscore_both_dim:
         z_col = np.round(mat, 10)  # Rounding so that float precision differences don't turn into huge CLR differences
-        z_col = np.subtract(z_col, np.mean(mat, axis=0))
-        z_col = np.divide(z_col, np.std(mat, axis=0, ddof=CLR_DDOF))
+        z_col = np.subtract(z_col, np.mean(mat, axis=0)[None, :])
+        z_col = np.divide(z_col, np.std(mat, axis=0, ddof=CLR_DDOF)[None, :])
 
         z_col[z_col < 0] = 0
 
@@ -153,10 +154,13 @@ def CLR(causality_mat, zscore_both_dim=None):
     return res
 
 def check_symmetric(a, rtol=1e-05, atol=1e-08):
-    if isinstance(causality_mat, pd.DataFrame): a = a.values
-    if isspmatrix(a):
-        res = (abs(Ms-Ms.T) > atol).nnz == 0
+    if a.shape[0] != a.shape[1]:
+        res = False
     else:
-        res = np.allclose(a, a.T, rtol=rtol, atol=atol)
+        if isinstance(a, pd.DataFrame): a = a.values
+        if isspmatrix(a):
+            res = (abs(a-a.T) > atol).nnz == 0
+        else:
+            res = np.allclose(a, a.T, rtol=rtol, atol=atol)
 
     return res
