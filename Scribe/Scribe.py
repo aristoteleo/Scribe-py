@@ -132,14 +132,18 @@ def CLR(causality_mat, zscore_both_dim=None):
 
     # Calculate the zscore for rows
     z_row = np.round(mat, 10)  # Rounding so that float precision differences don't turn into huge CLR differences
-    z_row = np.subtract(z_row, np.mean(mat, axis=1)[:, None])
-    z_row = np.divide(z_row, np.std(mat, axis=1, ddof=CLR_DDOF)[:, None])
+    z_row = np.subtract(z_row, np.mean(mat, axis=1)) if mat.shape[0] == mat.shape[1] \
+        else np.subtract(z_row, np.mean(mat, axis=1)[:, None])
+    z_row = np.divide(z_row, np.std(mat, axis=1, ddof=CLR_DDOF)) if mat.shape[0] == mat.shape[1] \
+        else np.divide(z_row, np.std(mat, axis=1, ddof=CLR_DDOF)[:, None])
     z_row[z_row < 0] = 0
 
     if zscore_both_dim:
         z_col = np.round(mat, 10)  # Rounding so that float precision differences don't turn into huge CLR differences
-        z_col = np.subtract(z_col, np.mean(mat, axis=0)[None, :])
-        z_col = np.divide(z_col, np.std(mat, axis=0, ddof=CLR_DDOF)[None, :])
+        z_col = np.subtract(z_col, np.mean(mat, axis=0)) if mat.shape[0] == mat.shape[1] \
+            else np.subtract(z_col, np.mean(mat, axis=0)[None, :])
+        z_col = np.divide(z_col, np.std(mat, axis=0, ddof=CLR_DDOF)) if mat.shape[0] == mat.shape[1] \
+            else np.divide(z_col, np.std(mat, axis=0, ddof=CLR_DDOF)[None, :])
 
         z_col[z_col < 0] = 0
 
