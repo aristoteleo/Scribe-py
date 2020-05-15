@@ -96,7 +96,7 @@ def causal_net_dynamics_coupling(adata, TFs=None, Targets=None, guide_keys=None,
         spliced = (spliced - spliced.mean()) / (spliced.max() - spliced.min())
         velocity = (velocity - velocity.mean()) / (velocity.max() - velocity.min())
 
-    causal_net = pd.DataFrame({node_id: [np.nan for i in TFs] for node_id in Targets}, index=TFs)
+    causal_net = pd.DataFrame(columns=Targets, index=TFs)
 
     for g_a in tqdm(TFs, desc=f"Calculate causality score (RDI) from each TF to potential target:"):
         for g_b in Targets:
