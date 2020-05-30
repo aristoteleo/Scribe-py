@@ -114,7 +114,7 @@ def causal_net_dynamics_coupling(adata, TFs=None, Targets=None, guide_keys=None,
                 z_orig = [[i] for i in z_orig]
                 causal_net.loc[g_a, g_b] = cmi(x_orig, y_orig, z_orig)
 
-    adata.uns['causal_net'] = causal_net.fillna(0)
+    adata.uns['causal_net'] = {"RDI": causal_net.fillna(0)}
 
 #     logg.info('     done', time = True, end = ' ' if settings.verbosity > 2 else '\n')
 #     logg.hint('perturbation_causal_net \n'
