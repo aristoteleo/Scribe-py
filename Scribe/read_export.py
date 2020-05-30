@@ -10,9 +10,10 @@ from . import logging as logg
 
 import pandas as pd
 import numpy as np
+from scipy.sparse import isspmatrix
 
 # append velocity data, etc. 
-def load_anndata(anndata, is_scale=False):
+def load_anndata(anndata, keys=None):
     """Convert an anndata object to a causal_model object.
 
     Arguments
@@ -21,8 +22,6 @@ def load_anndata(anndata, is_scale=False):
         Annotated data matrix.
     keys: `str`
         Column in obs used to set run id.
-    is_scale: `bool`
-        If value is true, read anndata.X._scale, else anndata.X.
 
     Returns
     ---------
@@ -33,11 +32,8 @@ def load_anndata(anndata, is_scale=False):
     logg.info('Create causal_model successfully')
 
     order_exprs_mat = True
-    if is_scale == False :
-        expression_raw = anndata.X
-    else:
-        expression_raw = anndata.X._scale
-    df = pd.DataFrame(expression_raw.transpose(), index = anndata.var_names.tolist())
+    expression_raw = anndata.X.A if isspmatrix(anndata.X) else anndata.X
+    df = pd.DataFrame(expression_raw.transpose(), index=anndata.var_names.tolist())
     df.index.name = 'GENE_ID'
 
     if "dpt_groups" in anndata.obs_keys(): # if pseudotime and branch of the dataset is assigned by scanpy, use the following 
@@ -48,7 +44,7 @@ def load_anndata(anndata, is_scale=False):
         order_exprs_mat = False
 
     if order_exprs_mat:
-        keys=anndata.obs[branch_key].tolist()
+        keys = anndata.obs[branch_key].tolist()
         uniq_keys = anndata.obs[branch_key].unique()
         uniq_keys = sorted(uniq_keys)
 
@@ -67,22 +63,30 @@ def load_anndata(anndata, is_scale=False):
 
             runid[:] = key
 
-            arrays=[df.index,runid]
+            arrays=[df.index, runid]
             index_col=pd.MultiIndex.from_arrays(arrays, names=('GINE_ID','RUN_ID'))
             if key==uniq_keys[0]:
-                expression_mat_=pd.DataFrame(cur_expression_mat.values.tolist(),index=index_col) # , columns=cur_obs_name
+                expression_mat_=pd.DataFrame(cur_expression_mat.values.tolist(), index=index_col) # , columns=cur_obs_name
             else :
-                cur_expression_mat_=pd.DataFrame(cur_expression_mat.values.tolist(),index=index_col) # , columns=cur_obs_name
-                expression_mat_=pd.concat([expression_mat_,cur_expression_mat_],axis=0)
+                cur_expression_mat_=pd.DataFrame(cur_expression_mat.values.tolist(), index=index_col) # , columns=cur_obs_name
+                expression_mat_=pd.concat([expression_mat_,cur_expression_mat_], axis=0)
     else:
         expression_mat_ = expression_raw
 
-    model.X = pd.DataFrame(np.transpose(anndata.X), index=anndata.var_names, columns=anndata.obs_names)
+    model.X = pd.DataFrame(np.transpose(expression_raw), index=anndata.var_names, columns=anndata.obs_names)
     model.expression_raw = expression_mat_
     model.expression = expression_mat_
-    model.unspliced = anndata.layers['unspliced'] if 'unspliced' in anndata.layers.keys() else None
-    model.spliced = anndata.layers['spliced'] if 'spliced' in anndata.layers.keys() else None
-    model.velocity = anndata.layers['velocity'] if 'velocity' in anndata.layers.keys() else None
+
+    model.unspliced, model.spliced, model.velocity = None, None, None
+    if 'unspliced' in anndata.layers.keys():
+        model.unspliced = anndata.layers['unspliced'].A if isspmatrix(anndata.layers['unspliced']) \
+            else anndata.layers['unspliced']
+    if 'spliced' in anndata.layers.keys():
+        model.spliced = anndata.layers['spliced'].A if isspmatrix(anndata.layers['spliced']) \
+            else anndata.layers['spliced']
+    if 'velocity' in anndata.layers.keys():
+        model.velocity = anndata.layers['velocity'].A if isspmatrix(anndata.layers['velocity']) \
+            else anndata.layers['velocity']
 
     if order_exprs_mat:
         model.node_ids = expression_mat_.index.levels[0]
@@ -90,7 +94,6 @@ def load_anndata(anndata, is_scale=False):
     else:
         model.node_ids = anndata.var_names.to_list()
         model.run_ids = [0]
-
 
     return model
     

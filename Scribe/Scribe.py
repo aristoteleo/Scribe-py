@@ -7,7 +7,15 @@ from .causal_network import cmi
 CLR_DDOF = 1
 
 
-def causal_net_dynamics_coupling(adata, TFs=None, Targets=None, guide_keys=None, t0_key='spliced', t1_key='velocity', normalize=True, copy=False):
+def causal_net_dynamics_coupling(adata,
+                                 TFs=None,
+                                 Targets=None,
+                                 guide_keys=None,
+                                 t0_key='spliced',
+                                 t1_key='velocity',
+                                 normalize=True,
+                                 drop_zero_cells=False,
+                                 copy=False):
     """Infer causal networks with dynamics-coupled single cells measurements.
     Network inference is a insanely challenging problem which has a long history and that none of the existing algorithms work well.
     However, it's quite possible that one or more of the algorithms could work if only they were given enough data. Single-cell
@@ -43,6 +51,9 @@ def causal_net_dynamics_coupling(adata, TFs=None, Targets=None, guide_keys=None,
         see Fig 6 of the Scribe preprint) from RNA velocity, old RNA from scSLAM-seq data.
     normalize: `bool`
         Whether to scale the expression or velocity values into 0 to 1 before calculating causal networks.
+    drop_zero_cells: `bool` (Default: True)
+        Whether to drop cells that with zero expression for either the potential regulator or potential target. This
+        can signify the relationship between potential regulators and targets.
     copy: `bool`
         Whether to return a copy of the adata or just update adata in place.
 
@@ -51,23 +62,18 @@ def causal_net_dynamics_coupling(adata, TFs=None, Targets=None, guide_keys=None,
         An update AnnData object with inferred causal network stored as a matrix related to the key `causal_net` in the `uns` slot.
     """
 
-    genes = None
     if TFs is None:
-        TFs = adata.var_names
+        TFs = adata.var_names.tolist()
     else:
         TFs = adata.var_names.intersection(TFs).tolist()
-        if len(TFs) > 0:
-            genes = TFs
-        else:
+        if len(TFs) == 0:
             raise Exception(f"The adata object has no gene names from .var_name that intersects with the TFs list you provided")
 
     if Targets is None:
-        Targets = adata.var_names
+        Targets = adata.var_names.tolist()
     else:
         Targets = adata.var_names.intersection(Targets).tolist()
-        if len(Targets) > 0:
-            genes = Targets if genes is None else genes + Targets
-        else:
+        if len(Targets) == 0:
             raise Exception(f"The adata object has no gene names from .var_name that intersect with the Targets list you provided")
 
     if guide_keys is not None:
@@ -79,6 +85,7 @@ def causal_net_dynamics_coupling(adata, TFs=None, Targets=None, guide_keys=None,
         guides = adata.var_names.values[idx_var.flatten()].tolist()
 
     # support sparse matrix:
+    genes = TFs + Targets
     genes = np.unique(genes)
     tmp = pd.DataFrame(adata[:, genes].layers[t0_key].todense()) if isspmatrix(adata.layers[t0_key]) \
         else pd.DataFrame(adata[:, genes].layers[t0_key])
@@ -104,14 +111,20 @@ def causal_net_dynamics_coupling(adata, TFs=None, Targets=None, guide_keys=None,
             if g_a == g_b:
                 continue
             else:
-                x_orig = spliced.loc[:, g_a].tolist()
-                y_orig = (spliced.loc[:, g_b] + velocity.loc[:, g_b]).tolist() if t1_key is 'velocity' else velocity.loc[:, g_b].tolist()
-                z_orig = spliced.loc[:, g_b].tolist()
+                x_orig = spliced.loc[:, g_a]
+                y_orig = (spliced.loc[:, g_b] + velocity.loc[:, g_b]) if t1_key is 'velocity' else velocity.loc[:, g_b]
+                z_orig = spliced.loc[:, g_b]
+
+                if drop_zero_cells:
+                    xyz_orig = x_orig + y_orig + z_orig
+                    x_orig, y_orig, z_orig = x_orig[xyz_orig > 0].tolist(), y_orig[xyz_orig > 0].tolist(), \
+                                             z_orig[xyz_orig > 0].tolist()
 
                 # input to cmi is a list of list
                 x_orig = [[i] for i in x_orig]
                 y_orig = [[i] for i in y_orig]
                 z_orig = [[i] for i in z_orig]
+
                 causal_net.loc[g_a, g_b] = cmi(x_orig, y_orig, z_orig)
 
     adata.uns['causal_net'] = {"RDI": causal_net.fillna(0)}

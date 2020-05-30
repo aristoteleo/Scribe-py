@@ -78,11 +78,11 @@ def kde2d(x, y, h=None, n=25, lims=None):
     nx = len(x)
     if not lims:
         lims = [min(x), max(x), min(y), max(y)]
-    if (len(y) != nx):
+    if len(y) != nx:
         raise Exception("data vectors must be the same length")
-    elif ((False in np.isfinite(x)) or (False in np.isfinite(y))):
+    elif (False in np.isfinite(x)) or (False in np.isfinite(y)):
         raise Exception("missing or infinite values in the data are not allowed")
-    elif (False in np.isfinite(lims)):
+    elif False in np.isfinite(lims):
         raise Exception("only finite values are allowed in 'lims'")
     else:
         n = rep(n, length=2) if isinstance(n, list) else rep([n], length=2)
@@ -108,8 +108,18 @@ def kde2d(x, y, h=None, n=25, lims=None):
 
 
 # understand the login information and use that for verbose
-def viz_response(adata, pairs_mat, log=False, delay=1, k=5, grid_num=25, n_row=None, n_col=1, scales="free", return_data = False,
-                      verbose=False):
+def viz_response(adata,
+                 pairs_mat,
+                 log=False,
+                 drop_zero_cells=True,
+                 delay=1,
+                 k=5,
+                 grid_num=25,
+                 n_row=None,
+                 n_col=1,
+                 scales="free",
+                 return_data=False,
+                 verbose=False):
     """Plot the lagged DREVI plot pairs of genes across pseudotime.
 
     This plotting function builds on the original idea of DREVI plot but is extended in the context for causal network.
@@ -132,6 +142,9 @@ def viz_response(adata, pairs_mat, log=False, delay=1, k=5, grid_num=25, n_row=N
         log: `bool` (Default: False)
             A logic argument used to determine whether or not you should perform log transformation (using :math:`log(expression + 1)`)
             before calculating density estimates, default to be TRUE.
+        drop_zero_cells: `bool` (Default: True)
+            Whether to drop cells that with zero expression for either the potential regulator or potential target. This
+            can signify the relationship between potential regulators and targets.
         delay: `int` (Default: 1)
             The time delay between the source and target gene.
         k: `int` (Default: 5)
@@ -163,33 +176,29 @@ def viz_response(adata, pairs_mat, log=False, delay=1, k=5, grid_num=25, n_row=N
             four columns (`x`: x-coordinate; `y`: y-coordinate; `type`: the corresponding gene pair).
     """
     model = load_anndata(adata)
-    data = model.X  # pd.DataFrame(model.expression.values,index = adata.var_names)
+    data = pd.DataFrame(model.expression.T, index=adata.var_names, columns=adata.obs_names)
 
     all_genes_in_pair = np.unique(pairs_mat)
 
-    if (not (set(all_genes_in_pair) <= set(data.index.values))):
+    if not (set(all_genes_in_pair) <= set(data.index.values)):
         raise Exception(
             "adata doesn't include all genes in gene_pairs_mat. Make sure all genes are included in gene_short_name column of the obs property of adata.")
 
     sub_data = data.loc[all_genes_in_pair, :]
+    if drop_zero_cells: sub_data = sub_data.loc[:, (sub_data > 0).sum(0) == 2]
 
-    if grid_num == None:
-        dim_val = (round((len(sub_data) - delay) / 4))
-    else:
-        dim_val = grid_num
-
-    flat_res = pd.DataFrame(columns=["x", "y", "den", "type"])  ###empty df
+    flat_res = pd.DataFrame(columns=["x", "y", "den", "type"])
     ridge_curve = pd.DataFrame(columns=["x", "y", "type"])
     xy = pd.DataFrame()
 
     id = 0
-    for gene_pairs_ind in range(len(pairs_mat)):
+    for gene_pairs_ind, gene_pairs in enumerate(pairs_mat):
         if verbose:
             info("current gene pair is ", pairs_mat[gene_pairs_ind, 0], " -> ",
-                 pairs_mat[gene_pairs_ind, 1])  ############
-        gene_pairs = pairs_mat[gene_pairs_ind, :]
-        f_ini_ind = (dim_val ** 2) * id - 1
-        r_ini_ind = dim_val * id - 1
+                 pairs_mat[gene_pairs_ind, 1])
+
+        f_ini_ind = (grid_num ** 2) * id - 1
+        r_ini_ind = grid_num * id - 1
 
         gene_pair_name = gene_pairs[0] + '->' + gene_pairs[1]
 
@@ -213,9 +222,9 @@ def viz_response(adata, pairs_mat, log=False, delay=1, k=5, grid_num=25, n_row=N
 
         if 0 in bandwidth:
             max_vec = [max(x), max(y)]
-            bandwidth[bandwidth == 0] = max_vec[bandwidth == 0] / dim_val
+            bandwidth[bandwidth == 0] = max_vec[bandwidth == 0] / grid_num
 
-        x_meshgrid, y_meshgrid, den_res = kde2d(x, y, n=[dim_val, dim_val], lims=[min(x), max(x), min(y), max(y)],
+        x_meshgrid, y_meshgrid, den_res = kde2d(x, y, n=[grid_num, grid_num], lims=[min(x), max(x), min(y), max(y)],
                                                 h=bandwidth)
         den_res = np.array(den_res)
 
@@ -268,7 +277,7 @@ def viz_response(adata, pairs_mat, log=False, delay=1, k=5, grid_num=25, n_row=N
 
         i, j = x % n_row, x // n_row  # %: remainder; //: integer division
 
-        im = axes[i, j].imshow(flat_res_subset['den'].values.reshape(dim_val, dim_val).T, interpolation='mitchell',
+        im = axes[i, j].imshow(flat_res_subset['den'].values.reshape(grid_num, grid_num).T, interpolation='mitchell',
                                origin='lower', extent=(min(x_val), max(x_val), min(y_val), max(y_val)),
                                cmap=matplotlib.colors.LinearSegmentedColormap.from_list('my_map',
                                                                                         ['#000000', '#000000',
@@ -292,7 +301,17 @@ def viz_response(adata, pairs_mat, log=False, delay=1, k=5, grid_num=25, n_row=N
         return (flat_res, flat_res_subset, ridge_curve_subset)
 
 
-def viz_causality(adata, pairs_mat, log=False, delay=1, k=5, grid_num=25, n_row=None, n_col=1, scales="free", return_data = False,
+def viz_causality(adata,
+                  pairs_mat,
+                  log=False,
+                  drop_zero_cells=False,
+                  delay=1,
+                  k=5,
+                  grid_num=25,
+                  n_row=None,
+                  n_col=1,
+                  scales="free",
+                  return_data = False,
                   verbose=False):
     """Plot the heatmap for the expected value :math:`y(t)` given :math:`x(t - d)` and :math:`y(t - 1)`.
 
@@ -316,6 +335,9 @@ def viz_causality(adata, pairs_mat, log=False, delay=1, k=5, grid_num=25, n_row=
         log: `bool` (Default: False)
             A logic argument used to determine whether or not you should perform log transformation (using log(expression + 1))
             before calculating density estimates, default to be TRUE.
+        drop_zero_cells: `bool` (Default: True)
+            Whether to drop cells that with zero expression for either the potential regulator or potential target. This
+            can signify the relationship between potential regulators and targets.
         delay: `int` (Default: 1)
             The time delay between the source and target gene.
         k: `int` (Default: 5)
@@ -337,17 +359,16 @@ def viz_causality(adata, pairs_mat, log=False, delay=1, k=5, grid_num=25, n_row=
         A figure created by matplotlib.
     """
     model = load_anndata(adata)
-    data = model.X
+    data = pd.DataFrame(model.expression.T, index=adata.var_names, columns=adata.obs_names)
 
     all_genes_in_pair = np.unique(pairs_mat)
 
-    if (not (set(all_genes_in_pair) <= set(data.index.values))):
+    if not (set(all_genes_in_pair) <= set(data.index.values)):
         raise Exception(
             "adata doesn't include all genes in gene_pairs_mat Make sure all genes are included in gene_short_name column of the cds_subset.")
 
-    sub_data = pd.DataFrame()
-
     sub_data = data.loc[all_genes_in_pair, :]
+    if drop_zero_cells: sub_data = sub_data.loc[:, (sub_data > 0).sum(0) == 2]
 
     flat_res = pd.DataFrame(columns=["x", "z", "expected_y", "pair"])  ###empty df
     xy = pd.DataFrame()
@@ -403,7 +424,6 @@ def viz_causality(adata, pairs_mat, log=False, delay=1, k=5, grid_num=25, n_row=
         if (not np.isfinite(max_val)):
             max_val = 1e10
 
-        print('f_ini_ind is ', f_ini_ind, ' ', grid_num)
         flat_res.iloc[(f_ini_ind):(f_ini_ind + len(dist_mat)), :]['expected_y'] = \
         flat_res.iloc[(f_ini_ind):(f_ini_ind + len(dist_mat)), :]['expected_y'] / max_val
 
@@ -450,8 +470,19 @@ def viz_causality(adata, pairs_mat, log=False, delay=1, k=5, grid_num=25, n_row=
         return flat_res
 
 
-def viz_comb_logic(adata, pairs_mat, log=False, delay=1, grid_num=25, n_row=None, n_col=1, normalized=True, scales="free",
-                   k=5, return_data=False, verbose=False):
+def viz_comb_logic(adata,
+                   pairs_mat,
+                   log=False,
+                   drop_zero_cells=False,
+                   delay=1,
+                   grid_num=25,
+                   n_row=None,
+                   n_col=1,
+                   normalized=True,
+                   scales="free",
+                   k=5,
+                   return_data=False,
+                   verbose=False):
     """Plot the combinatorial influence of two genes :math:`x`, :math:`y` to the target :math:`z`.
 
     This plotting function tries to intuitively visualize the influence from genes :math:`x` and :math:`y` to the target :math:`z`.
@@ -473,6 +504,9 @@ def viz_comb_logic(adata, pairs_mat, log=False, delay=1, grid_num=25, n_row=None
         log: `bool` (Default: False)
             A logic argument used to determine whether or not you should perform log transformation (using log(expression + 1))
             before calculating density estimates, default to be TRUE.
+        drop_zero_cells: `bool` (Default: True)
+            Whether to drop cells that with zero expression for either the potential regulator or potential target. This
+            can signify the relationship between potential regulators and targets.
         delay: `int` (Default: 1)
             The time delay between the source and target gene.
         grid_num: `int` (Default: 25)
@@ -494,11 +528,11 @@ def viz_comb_logic(adata, pairs_mat, log=False, delay=1, grid_num=25, n_row=None
         A figure created by matplotlib.
     """
     model = load_anndata(adata)
-    data = model.X  # pd.DataFrame(model.expression.values,index = adata.var_names)
+    data = pd.DataFrame(model.expression.T, index=adata.var_names, columns=adata.obs_names)
 
     all_genes_in_pair = np.unique(pairs_mat)
 
-    if (not (set(all_genes_in_pair) <= set(data.index.values))):
+    if not (set(all_genes_in_pair) <= set(data.index.values)):
         raise Exception(
             "cds_subset doesn't include all genes in gene_pairs_mat Make sure all genes are included in gene_short_name column of the cds_subset.")
 
@@ -506,6 +540,8 @@ def viz_comb_logic(adata, pairs_mat, log=False, delay=1, grid_num=25, n_row=None
     for gene_id in all_genes_in_pair:
         sub_data_cur = pd.DataFrame(data.loc[gene_id]).T
         sub_data = pd.concat([sub_data, sub_data_cur])
+
+    if drop_zero_cells: sub_data = sub_data.loc[:, (sub_data.iloc[:, :3] > 0).sum(1) == 3]
     flat_res = pd.DataFrame(columns=["x", "y", "expected_z", "pair"])  ###empty df
     xy = pd.DataFrame()
 
