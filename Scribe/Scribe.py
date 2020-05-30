@@ -79,6 +79,7 @@ def causal_net_dynamics_coupling(adata, TFs=None, Targets=None, guide_keys=None,
         guides = adata.var_names.values[idx_var.flatten()].tolist()
 
     # support sparse matrix:
+    genes = np.unique(genes)
     tmp = pd.DataFrame(adata[:, genes].layers[t0_key].todense()) if isspmatrix(adata.layers[t0_key]) \
         else pd.DataFrame(adata[:, genes].layers[t0_key])
     tmp.index = adata.obs_names
@@ -113,7 +114,7 @@ def causal_net_dynamics_coupling(adata, TFs=None, Targets=None, guide_keys=None,
                 z_orig = [[i] for i in z_orig]
                 causal_net.loc[g_a, g_b] = cmi(x_orig, y_orig, z_orig)
 
-    adata.uns['causal_net'] = causal_net
+    adata.uns['causal_net'] = causal_net.fillna(0)
 
 #     logg.info('     done', time = True, end = ' ' if settings.verbosity > 2 else '\n')
 #     logg.hint('perturbation_causal_net \n'
@@ -122,7 +123,7 @@ def causal_net_dynamics_coupling(adata, TFs=None, Targets=None, guide_keys=None,
     return adata if copy else None
 
 def CLR(causality_mat, zscore_both_dim=None):
-    """Calculate the context liklihood of relatedness from mutual information. Note that the background mutual information
+    """Calculate the context likelihood of relatedness from mutual information. Note that the background mutual information or (RDI)
     uses the same data. code adapted from https://github.com/flatironinstitute/inferelator/blob/master/inferelator/regression/mi.py"""
 
     # if symmetric, then it is non-directional; otherwise it is directional
@@ -161,8 +162,11 @@ def check_symmetric(a, rtol=1e-05, atol=1e-08):
     if a.shape[0] != a.shape[1]:
         res = False
     else:
-        if isinstance(a, pd.DataFrame): a = a.values
+        if isinstance(a, pd.DataFrame):
+            a = a.fillna(-1)
+            a = a.values
         if isspmatrix(a):
+            a.data = np.nan_to_num(a.data)
             res = (abs(a-a.T) > atol).nnz == 0
         else:
             res = np.allclose(a, a.T, rtol=rtol, atol=atol)

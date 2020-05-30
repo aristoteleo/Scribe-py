@@ -2,7 +2,7 @@ import networkx as nx
 import numpy as np
 import matplotlib.pyplot as plt
 
-def vis_causal_net(adata, layout = 'circular', top_n_edges = 10, edge_color = 'gray', figsize=(6, 6)):
+def vis_causal_net(adata, key='RDI', layout = 'circular', top_n_edges = 10, edge_color = 'gray', figsize=(6, 6)):
     """Visualize inferred causal regulatory network
 
     This plotting function visualize the inferred causal regulatory network inferred from Scribe.
@@ -11,6 +11,8 @@ def vis_causal_net(adata, layout = 'circular', top_n_edges = 10, edge_color = 'g
     ---------
         adata: `Anndata`
             Annotated Data Frame, an Anndata object.
+        key: `str` (default: `RDI`)
+            The key points to the type of causal network to be used for network visualization.
         layout: `str` (Default: circular)
             A string determines the graph layout function supported by networkx. Currently supported layouts include
             circular, kamada_kawai, planar, random, spectral, spring and shell.
@@ -29,7 +31,7 @@ def vis_causal_net(adata, layout = 'circular', top_n_edges = 10, edge_color = 'g
     if 'causal_net' not in adata.uns.keys():
         raise('causal_net is not a key in uns slot. Please first run causal network inference with Scribe.')
 
-    df_mat = adata.uns['causal_net']
+    df_mat = adata.uns['causal_net'][key]
     ind_mat = np.where(df_mat.values - df_mat.T.values < 0)
 
     tmp = np.where(df_mat.values - df_mat.T.values < 0)
@@ -76,4 +78,5 @@ def vis_causal_net(adata, layout = 'circular', top_n_edges = 10, edge_color = 'g
         nx.draw_shell(G, with_labels=True, node_color='skyblue', node_size=100, edge_color=edge_color, width=W / np.max(W) * 5, edge_cmap=plt.cm.Blues, options = options)
     else:
         raise('layout', layout, ' is not supported.')
+
     plt.show()
