@@ -1,7 +1,7 @@
 /.idea/
-./debug
+debug/
 Scribe.egg-info/
-__pycache__/	
+/__pycache__/	
 build/
 dist/
 __pycache__/
