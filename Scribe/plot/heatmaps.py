@@ -144,7 +144,8 @@ def viz_response(adata,
             before calculating density estimates, default to be TRUE.
         drop_zero_cells: `bool` (Default: True)
             Whether to drop cells that with zero expression for either the potential regulator or potential target. This
-            can signify the relationship between potential regulators and targets.
+            can signify the relationship between potential regulators and targets, speed up the calculation, but at the risk
+            of ignoring strong inhibition effects from certain regulators to targets.
         delay: `int` (Default: 1)
             The time delay between the source and target gene.
         k: `int` (Default: 5)
@@ -337,7 +338,8 @@ def viz_causality(adata,
             before calculating density estimates, default to be TRUE.
         drop_zero_cells: `bool` (Default: True)
             Whether to drop cells that with zero expression for either the potential regulator or potential target. This
-            can signify the relationship between potential regulators and targets.
+            can signify the relationship between potential regulators and targets, speed up the calculation, but at the risk
+            of ignoring strong inhibition effects from certain regulators to targets.
         delay: `int` (Default: 1)
             The time delay between the source and target gene.
         k: `int` (Default: 5)
@@ -506,7 +508,8 @@ def viz_comb_logic(adata,
             before calculating density estimates, default to be TRUE.
         drop_zero_cells: `bool` (Default: True)
             Whether to drop cells that with zero expression for either the potential regulator or potential target. This
-            can signify the relationship between potential regulators and targets.
+            can signify the relationship between potential regulators and targets, speed up the calculation, but at the risk
+            of ignoring strong inhibition effects from certain regulators to targets.
         delay: `int` (Default: 1)
             The time delay between the source and target gene.
         grid_num: `int` (Default: 25)

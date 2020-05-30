@@ -14,7 +14,7 @@ def causal_net_dynamics_coupling(adata,
                                  t0_key='spliced',
                                  t1_key='velocity',
                                  normalize=True,
-                                 drop_zero_cells=False,
+                                 drop_zero_cells=True,
                                  copy=False):
     """Infer causal networks with dynamics-coupled single cells measurements.
     Network inference is a insanely challenging problem which has a long history and that none of the existing algorithms work well.
@@ -53,7 +53,8 @@ def causal_net_dynamics_coupling(adata,
         Whether to scale the expression or velocity values into 0 to 1 before calculating causal networks.
     drop_zero_cells: `bool` (Default: True)
         Whether to drop cells that with zero expression for either the potential regulator or potential target. This
-        can signify the relationship between potential regulators and targets.
+        can signify the relationship between potential regulators and targets, speed up the calculation, but at the risk
+        of ignoring strong inhibition effects from certain regulators to targets.
     copy: `bool`
         Whether to return a copy of the adata or just update adata in place.
 
@@ -135,6 +136,7 @@ def causal_net_dynamics_coupling(adata,
 
     return adata if copy else None
 
+
 def CLR(causality_mat, zscore_both_dim=None):
     """Calculate the context likelihood of relatedness from mutual information. Note that the background mutual information or (RDI)
     uses the same data. code adapted from https://github.com/flatironinstitute/inferelator/blob/master/inferelator/regression/mi.py"""
@@ -170,6 +172,7 @@ def CLR(causality_mat, zscore_both_dim=None):
         res.index, res.columns = causality_mat.index, causality_mat.columns
 
     return res
+
 
 def check_symmetric(a, rtol=1e-05, atol=1e-08):
     if a.shape[0] != a.shape[1]:
