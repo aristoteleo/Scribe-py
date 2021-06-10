@@ -112,8 +112,14 @@ def causal_net_dynamics_coupling(adata,
             if g_a == g_b:
                 continue
             else:
+                # calculate the information transfer from regulator's current to target's future,
+                # conditioned on target's past
+
+                # x_t_min_1: regulator's past
                 x_orig = spliced.loc[:, g_a]
+                # y_t: target's current
                 y_orig = (spliced.loc[:, g_b] + velocity.loc[:, g_b]) if t1_key is 'velocity' else velocity.loc[:, g_b]
+                # y_t_min_1: target's current
                 z_orig = spliced.loc[:, g_b]
 
                 if drop_zero_cells:
@@ -129,10 +135,6 @@ def causal_net_dynamics_coupling(adata,
                 causal_net.loc[g_a, g_b] = cmi(x_orig, y_orig, z_orig)
 
     adata.uns['causal_net'] = {"RDI": causal_net.fillna(0)}
-
-#     logg.info('     done', time = True, end = ' ' if settings.verbosity > 2 else '\n')
-#     logg.hint('perturbation_causal_net \n'
-#               '     matrix is added to adata.uns')
 
     return adata if copy else None
 
