@@ -118,7 +118,7 @@ def causal_net_dynamics_coupling(adata,
                 # x_t_min_1: regulator's past
                 x_orig = spliced.loc[:, g_a]
                 # y_t: target's current
-                y_orig = (spliced.loc[:, g_b] + velocity.loc[:, g_b]) if t1_key is 'velocity' else velocity.loc[:, g_b]
+                y_orig = (spliced.loc[:, g_b] + velocity.loc[:, g_b]) if t1_key == 'velocity' else velocity.loc[:, g_b]
                 # y_t_min_1: target's current
                 z_orig = spliced.loc[:, g_b]
 
