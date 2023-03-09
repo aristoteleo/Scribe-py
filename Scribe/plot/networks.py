@@ -62,19 +62,19 @@ def vis_causal_net(adata, key='RDI', layout = 'circular', top_n_edges = 10, edge
     plt.figure(figsize=figsize)
     if layout is None:
         nx.draw(G, with_labels=True, node_color='skyblue', node_size=100, edge_color=edge_color, width=W / np.max(W) * 5, edge_cmap=plt.cm.Blues, options = options)
-    elif layout is "circular":
+    elif layout == "circular":
         nx.draw_circular(G, with_labels=True, node_color='skyblue', node_size=100, edge_color=edge_color, width=W / np.max(W) * 5, edge_cmap=plt.cm.Blues, options = options)
-    elif layout is "kamada_kawai":
+    elif layout == "kamada_kawai":
         nx.draw_kamada_kawai(G, with_labels=True, node_color='skyblue', node_size=100, edge_color=edge_color, width=W / np.max(W) * 5, edge_cmap=plt.cm.Blues, options = options)
-    elif layout is "planar":
+    elif layout == "planar":
         nx.draw_planar(G, with_labels=True, node_color='skyblue', node_size=100, edge_color=edge_color, width=W / np.max(W) * 5, edge_cmap=plt.cm.Blues, options = options)
-    elif layout is "random":
+    elif layout == "random":
         nx.draw_random(G, with_labels=True, node_color='skyblue', node_size=100, edge_color=edge_color, width=W / np.max(W) * 5, edge_cmap=plt.cm.Blues, options = options)
-    elif layout is "spectral":
+    elif layout == "spectral":
         nx.draw_spectral(G, with_labels=True, node_color='skyblue', node_size=100, edge_color=edge_color, width=W / np.max(W) * 5, edge_cmap=plt.cm.Blues, options = options)
-    elif layout is "spring":
+    elif layout == "spring":
         nx.draw_spring(G, with_labels=True, node_color='skyblue', node_size=100, edge_color=edge_color, width=W / np.max(W) * 5, edge_cmap=plt.cm.Blues, options = options)
-    elif layout is "shell":
+    elif layout == "shell":
         nx.draw_shell(G, with_labels=True, node_color='skyblue', node_size=100, edge_color=edge_color, width=W / np.max(W) * 5, edge_cmap=plt.cm.Blues, options = options)
     else:
         raise('layout', layout, ' is not supported.')
